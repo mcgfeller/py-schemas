@@ -9,7 +9,7 @@ It expand on the ideas put forth in https://ict.swisscom.ch/2017/12/python-schem
 
 # Approach
 
-Have a SIG like SIG-DB. 
+Have a Python Special Interest Group (SIG) like [DB SIG](https://www.python.org/community/sigs/current/db-sig/). 
 
 
 # Existing Schema Solutions
@@ -18,16 +18,16 @@ My own list, from https://ict.swisscom.ch/2017/12/python-schema/ - all interpret
 
 Name | Framework | Main Purpose | Formats | Link | Comments
 ---- | --------- | ------------ | ------- | ---- | --------
-Django Models | Django | ORM | SQL | https://docs.djangoproject.com/en/2.0/topics/db/models/ 
-SQLAlchemy Mappings | SQLAlchemy | ORM | SQL | https://docs.sqlalchemy.org/en/latest/orm/mapping_styles.html 
-Marshmallow | stand-alone | validation, serialization | Python dict | https://marshmallow.readthedocs.io/en/latest/ 
-Graphene | Graphene | GraphQL implementation | JSON | https://graphene-python.org/ 
-Cerberus | Eve | Document validation, REST API | Python dict | http://docs.python-cerberus.org/en/stable/ 
-Colander | Pyramid | Serialization | XML, HTML, JSON | https://docs.pylonsproject.org/projects/colander/en/latest/ 
-KIM | standalone | JSON serailization and validation | JSON | https://kim.readthedocs.io/en/latest/ 
-schema | standalone | Python data validation | Python data | https://pypi.org/project/schema/
-valider | standalone | Python data validation and adaption | Python dict | https://github.com/podio/valideer
-voluptuous | standalone | Python data validation | Python dict | https://github.com/alecthomas/voluptuous
+[Django Models](https://docs.djangoproject.com/en/2.0/topics/db/models/) | Django | ORM | SQL
+[SQLAlchemy Mappings](https://docs.sqlalchemy.org/en/latest/orm/mapping_styles.html) | SQLAlchemy | ORM | SQL |  
+[Marshmallow](https://marshmallow.readthedocs.io/en/latest/) | stand-alone | validation, serialization | Python dict | 
+[Graphene](https://graphene-python.org/) | Graphene | GraphQL implementation | JSON | 
+[Cerberus](http://docs.python-cerberus.org/en/stable/) | Eve | Document validation, REST API | Python dict | 
+[Colander](https://docs.pylonsproject.org/projects/colander/en/latest/) | Pyramid | Serialization | XML, HTML, JSON |  
+[KIM](https://kim.readthedocs.io/en/latest/) | standalone | JSON serailization and validation | JSON | 
+[schema](https://pypi.org/project/schema/) | standalone | Python data validation | Python data | 
+[valider](https://github.com/podio/valideer) | standalone | Python data validation and adaption | Python dict | 
+[voluptuous](https://github.com/alecthomas/voluptuous) | standalone | Python data validation | Python dict | 
 
 
 
