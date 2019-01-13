@@ -3,6 +3,9 @@
 import typing
 import marshmallow as mm
 import dataclasses
+import decimal
+import datetime
+
 
 class Person:
 
@@ -13,15 +16,14 @@ class Person:
 
 
 class PersonSchema(mm.Schema):
-    name = mm.fields.Str()
-    email = mm.fields.Email()
-    sex = mm.fields.Str(validate=mm.fields.validate.OneOf(('m','f','o','?')))
+    name = mm.fields.Str(required=True)
+    email = mm.fields.Email(missing=None)
+    sex = mm.fields.Str(validate=mm.fields.validate.OneOf(('m','f','o','?')),missing='?')
     education = mm.fields.Dict(values=mm.fields.Date(), keys=mm.fields.Str())
 
 
 """ Now adapt Marshmallow by some monkey patching """
-import decimal
-import datetime
+
 
 
 def _get_native_class(self):
@@ -56,7 +58,11 @@ mm.fields.Dict.get_native_class = _dict_get_native_class
 def _schema_as_annotation(cls):
     r = {}
     for name,field in cls._declared_fields.items():
-        r[name] = field.get_native_class()
+        nclass = field.get_native_class()
+        if not field.required:
+            if field.missing is not mm.missing: # this is dummy!
+                nclass = typing.Union[nclass,type(field.missing)]
+        r[name] = nclass
     return r
 
 @classmethod
@@ -85,10 +91,13 @@ class DCPerson:
 DCPerson(name='martin',email='mgf@acm.org',sex='m',education={})
 
 
-class MMtext(typing.Generic):
+def MMtype(name, mmfield):
+    nt = typing.NewType(name,mmfield.get_native_class())
+    nt._mmfield = mmfield
+    return nt
 
-    def __getitem__(self, params):
-        print(self,params)
-        return super().__getitem__(params)
+class MMtypedPerson:
+    name : MMtype('name',mm.fields.Str(required=True))
     
+
 
