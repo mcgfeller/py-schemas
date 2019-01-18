@@ -37,7 +37,7 @@ An object in _internal form_ can be dynamically validated to conform to a schema
 
 ## Use Case: Static type checking
 
-An object is being statically checked (mypy) to conform to its type annotation.
+An object is being statically checked [mypy](http://mypy-lang.org/) to conform to its type annotation. See [PEP-484](https://www.python.org/dev/peps/pep-0484) for details.
 
 ## Use Case: Form Generation and Validation
 
