@@ -12,4 +12,5 @@ Name | Framework | Main Purpose | Formats | Validation | Un/Serialization | Obje
 [schema](https://pypi.org/project/schema/) | standalone | Python data validation | Python data | x | via converters | - |  
 [valider](https://github.com/podio/valideer) | standalone | Python data validation and adaption | Python dict | x | x | extensible | 
 [voluptuous](https://github.com/alecthomas/voluptuous) | standalone | Python data validation | Python dict | x | - | - |
+[DB API type codes](https://www.python.org/dev/peps/pep-0249/#description) | DB API | SQL interface | SQL | - | x | x | . | on single fields |
 
