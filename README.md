@@ -3,7 +3,7 @@
 
 This is a working document to propose a unfication of Schemas used in Python. 
 
-It expand on the ideas put forth in https://ict.swisscom.ch/2017/12/python-schema/ and on growing frustrations with special-purpose schemas. 
+It expand on the ideas put forth in my [Dec 17 Blog Post on Python Schemas](https://ict.swisscom.ch/2017/12/python-schema/) and on growing frustrations with special-purpose schemas. 
 
 # Goals
 
