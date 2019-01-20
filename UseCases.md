@@ -1,4 +1,4 @@
-# Scehma Use Cases 
+# Schema Use Cases 
 
 Some of the following Use Cases may be amenable to interoperability by defining protocols.
 
