@@ -2,7 +2,9 @@
 
 Some of the following Use Cases may be amenable to interoperability by defining protocols.
 
-## Use Case: Define a schema 
+The Use Cases reliy on common minimal [definitions](definitions.md). 
+
+## Use Case: Define a Schema 
 
 ### Common solutions
 
@@ -10,7 +12,7 @@ Some of the following Use Cases may be amenable to interoperability by defining 
 * Schema defined as a dictionary
 * Schema defined as a Schema object
 
-## Use Case: Attach a Schema to an object 
+## Use Case: Attach a Schema to an object class 
 
 ### Common solutions
 * Schema is nested in the class (as class attribute, class method returing it, inner class)
@@ -22,7 +24,7 @@ Some of the following Use Cases may be amenable to interoperability by defining 
 
 ## Use Case: Transform an object
 
-An object can be transformed from an internal to one or more external representations. 
+An object can be transformed from an internal to one or more external representations and vice versa.
 
 ### Examples
 
@@ -39,7 +41,22 @@ An object in _internal form_ can be dynamically validated to conform to a schema
 
 An object is being statically checked [mypy](http://mypy-lang.org/) to conform to its type annotation. See [PEP-484](https://www.python.org/dev/peps/pep-0484) for details.
 
+## Use Case: Defining an individual data item
+
+A Schema Element may be used to define an individual data item, independtly from any containing Schema. The definition may be used within Python or in another context (e.g., in Vue.js). 
+
+## Use Case: Associate data with Schema or Schema Elements
+
+A Schema or Schema Element may be used to hold additional data. Such data is specific to the Schema and not to any objects corresponding to the Schema. The associated data is not used for transformation,  validation or type checking. 
+
+### Examples
+- Hints for relationship to other schemas
+- Hints for indexing
+- Layout hints for presenting data
+
 ## Use Case: Form Generation and Validation
+
+A schema can be used to generate and validate a form, either using HTML forms or another suitable input description language. This Use Case may use data associated with the schema.  
 
 ### Examples
 
