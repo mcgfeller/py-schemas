@@ -1,5 +1,7 @@
 # Definitions
 
+These defintions should be minumal in the sense that they do not prescribe an implementation. 
+
 ## Schema and Elements
 - A *Schema* is a collection of elements.
 -- The Schema itself may or may not have properties indepenent of its elements
