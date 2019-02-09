@@ -2,7 +2,7 @@
 
 These defintions should be minumal in the sense that they do not prescribe an implementation. 
 
-I use _object_ in the sense of an instance of an user defined class, noting of course, that every value in Python is an object. I use _value_ to denote all Python objects in that sense. 
+I use _object_ in the sense of an instance of an user defined class, noting of course, that every value in Python is an object. I use _value_ to denote all Python objects (such as numbers, dicts, lists, sets, etc.) in that sense. 
 
 ## Schema and Elements
 - A *Schema* is a collection of elements.
