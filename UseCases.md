@@ -43,7 +43,11 @@ An object is being statically checked [mypy](http://mypy-lang.org/) to conform t
 
 ## Use Case: Defining an individual data item
 
-A Schema Element may be used to define an individual data item, independtly from any containing Schema. The definition may be used within Python or in another context (e.g., in Vue.js). 
+A Schema Element may be used to define an individual data item, independtly from any containing Schema. The definition may be used within Python or in another context (e.g., as a [Prop Type](https://vuejs.org/v2/guide/components-props.html#Prop-Types) in Vue.js). 
+
+## Use Case: Transform Schema to another notation
+
+A Schema may be transformed to another Schema notation; either within Python or to an external Schema-like definition (e.g., [XML Schema](https://en.wikipedia.org/wiki/XML_Schema_(W3C)), [JSON Schema](https://json-schema.org/), [OpenAPI SchemaObject](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#schemaObject)) 
 
 ## Use Case: Associate data with Schema or Schema Elements
 
@@ -62,7 +66,9 @@ A schema can be used to generate and validate a form, either using HTML forms or
 
 * Django Models: HTML forms
 
+## Use Case Diagram
 
+![Image](https://yuml.me/3ec691c7.png)
 
 
 
