@@ -70,5 +70,7 @@ A schema can be used to generate and validate a form, either using HTML forms or
 
 ![Image](https://yuml.me/3ec691c7.png)
 
+http://yuml.me/edit/3ec691c7
+
 
 
