@@ -121,8 +121,12 @@ class Schema(mm.Schema):
         
 
     def validate_internal(self, obj : SchemedObject, **params, ) -> SchemedObject:
-        s = self.validate(obj)
-        return s
+        """ Marshmallow doesn't provide validation on the object - we need to dump it.
+            As Schema.validate returns a dict, but we want an error raised, we call .load() instead.
+            However, if the validation doesn't raise an error, we return the argument obj unchanged. 
+        """
+        s = self.load(self.dump(obj)) # may raise an error
+        return obj
 
 
     def __iter__(self):
