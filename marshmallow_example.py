@@ -21,7 +21,7 @@ for se in p.__get_schema__():
 
 @dataclasses.dataclass
 class DCPerson(Person):
-     __annotations__ = Person.Schema().as_annotations()
+     __annotations__ = Person.Schema().as_field_annotations()
 
 dcp = DCPerson(name='Martin',email='mgf@acm.org',sex='m',education={})
 

@@ -9,8 +9,9 @@ class SchemedObject(metaclass=abc.ABCMeta):
     """ An object with a Schema, supporting the __get_schema__ method.
     """
 
-    @abc.abstractmethod
-    def __get_schema__(self) -> 'AbstractSchema':
+    @classmethod
+    @abc.abstractmethod    
+    def __get_schema__(cls) -> 'AbstractSchema':
         pass
 
 
@@ -72,6 +73,15 @@ class AbstractSchema(collections.abc.Iterable,metaclass=abc.ABCMeta):
             I would wish that __annotations__ is a protocol that can be provided, instead of simply assuming it is a mapping. 
         """
         return {se.get_name() : se.get_python_type() for se in self}
+
+    def as_field_annotations(self) -> typing.Dict[str,type]:
+        """ return Schema Elements in DataClass field annotation format.
+            Use as class.__annotations__ = schema.as_field_annotations().
+
+            Equivalent to as_annotations unless refined in a subclass, 
+        """
+        return self.as_field_annotations() 
+
 
 
 

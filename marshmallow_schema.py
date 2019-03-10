@@ -8,6 +8,7 @@ import marshmallow as mm
 import decimal
 import datetime
 import abc_schema
+import dataclasses
 
 
 """ Now adapt Marshmallow fields by some monkey patching """
@@ -48,10 +49,12 @@ mm.fields.Dict.get_python_type = _dict_get_python_type
 
 
 class SchemedObject:
+    """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
+        Schema. It defines one class method .__get_schema__, to return that Schema.
+    """
 
-
-    def __get_schema__(self):
-        cls = self.__class__
+    @classmethod
+    def __get_schema__(cls):
         s = getattr(cls,'__schema',None)
         if s is None:
             sclass = getattr(cls,'Schema',None)
@@ -119,13 +122,14 @@ class Schema(mm.Schema):
 
     def validate_internal(self, obj : SchemedObject, **params, ) -> SchemedObject:
         s = self.validate(obj)
+        return s
 
 
     def __iter__(self):
-        """ iterator through SchemaElements in this Schema """
-        for k,v in self._declared_fields.items():
-            v.name = k
-            yield v
+        """ iterator through SchemaElements in this Schema, sett """
+        for name,field in self._declared_fields.items():
+            field.name = name
+            yield field
 
     def as_annotations(self):
         """ return Schema Elements in annotation format.
@@ -141,7 +145,22 @@ class Schema(mm.Schema):
             r[name] = nclass
         return r
 
+
+    def as_field_annotations(self):
+        """ return Schema Elements in dataclass field annotation format.
+            Use as class.__annotations__ = schema.as_annotations()
+        """
+        r = {}
+        for name,field in self._declared_fields.items():
+            nclass = field.get_python_type()
+            default = None if field.missing is not mm.missing else field.missing
+            metadata = None 
+            dcfield = dataclasses.field(default=default,metadata=metadata)
+            r[name] = dcfield
+        return r
+
     def object_factory(self,d : dict) -> typing.Union[SchemedObject,dict]:
+        """ return an object from dict, according to the Schema's __objclass__ """
         objclass = getattr(self,'__objclass__',None)
         if objclass:
             o = objclass(**d) # factory!
