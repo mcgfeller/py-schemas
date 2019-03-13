@@ -1,11 +1,12 @@
 """ ABC Marshmallow Schema examples """
-import marshmallow_schema as mms
+from marshmallow_schema import SchemedObject,Schema
+import abc_schema
 import marshmallow as mm
 import dataclasses
 
-class Person(mms.SchemedObject):
+class Person(SchemedObject):
 
-    class Schema(mms.Schema):
+    class Schema(Schema):
         name = mm.fields.Str(required=True)
         email = mm.fields.Email(missing=None)
         sex = mm.fields.Str(validate=mm.fields.validate.OneOf(('m','f','o','?')),missing='?')
@@ -26,6 +27,6 @@ class DCPerson(Person):
 dcp = DCPerson(name='Martin',email='mgf@acm.org',sex='m',education={})
 
 dcp_s = dcp.__get_schema__()
-j = dcp_s.to_external(dcp,mms.abc_schema.WellknownRepresentation.json)
-o = dcp_s.from_external(j,mms.abc_schema.WellknownRepresentation.json)
+j = dcp_s.to_external(dcp,abc_schema.WellknownRepresentation.json)
+o = dcp_s.from_external(j,abc_schema.WellknownRepresentation.json)
 dcp_s.validate_internal(dcp)

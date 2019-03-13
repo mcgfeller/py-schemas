@@ -70,7 +70,8 @@ class AbstractSchema(collections.abc.Iterable,metaclass=abc.ABCMeta):
     def as_annotations(self) -> typing.Dict[str,type]:
         """ return Schema Elements in annotation format.
             Use as class.__annotations__ = schema.as_annotations()
-            I would wish that __annotations__ is a protocol that can be provided, instead of simply assuming it is a mapping. 
+            I would wish that __annotations__ is a protocol that can be provided,
+            instead of simply assuming it is a mapping. 
         """
         return {se.get_name() : se.get_python_type() for se in self}
 
