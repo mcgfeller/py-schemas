@@ -21,13 +21,30 @@ Python typing only allows declaration of uniform value types for dictionaries (i
 
 ## Interoperability between Schema solutions
 
+The current proposal is contained in a Jupyter Notebook: [A minimal standard for interoperable Schemas](SchemaProtocol.ipynb).
+
+The minimal standard is defined as a Protocol, with some Abstract Base Classes. The protocol is minimal in that it provides for the most common [Use Cases(UseCases.md):
+* Serialization to an external representation
+* Deserialization from an external representation
+* Validation
+* Obtaining Schema elements
+* Static type checking
+  * Get the Python type of a schema element 
+* Associate data with Schema
+
+The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. It does not provide conversion of arbitrary Schema features between schema libraries, but it provides conversion to Python static types. See [Alternatives considered](alternatives.md).
+
+
+
 ## Allow wide variety of Use Cases and destinations
 
 There are a number of [Use Cases](UseCases.md) and a large number of [pre-existing solutions](ExistingSolutions.md), serving a wide number of serialization targets. 
 
+Using the Protocol for a single schema library, such as Marshmallow, does not provide facilities superior over the native usage. However, if the protocol is implemented by several libraries, integration of libraries using different schema facilities becomes much easier.
+
 # Approach
 
-Have a Python Special Interest Group (SIG) like [DB SIG](https://www.python.org/community/sigs/current/db-sig/). [Known Schema solutions](https://github.com/mcgfeller/py-schemas/wiki/Some-existing-Schema-solutions) are candidates to participate. 
+Have a Python Special Interest Group (SIG) like [DB SIG](https://www.python.org/community/sigs/current/db-sig/). [Known Schema solutions](ExistingSolutions.md) are candidates to participate. 
 
 
 
