@@ -39,7 +39,9 @@ An object in _internal form_ can be dynamically validated to conform to a schema
 
 ## Use Case: Static type checking
 
-An object is being statically checked [mypy](http://mypy-lang.org/) to conform to its type annotation. See [PEP-484](https://www.python.org/dev/peps/pep-0484) for details.
+An object is being statically checked [mypy](http://mypy-lang.org/) to conform to its type annotation. See [PEP-484](https://www.python.org/dev/peps/pep-0484) for details. 
+
+Note that MyPy currently cannot check type definitions returned by functions and methods (definitions, not the return type itself). However, MyPy has a [plugin mechanism](http://mypy-lang.blogspot.com/2019/03/extending-mypy-with-plugins.html) that should support such calculated types. 
 
 ## Use Case: Defining an individual data item
 

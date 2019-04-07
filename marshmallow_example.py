@@ -1,8 +1,9 @@
 """ ABC Marshmallow Schema examples """
 from marshmallow_schema import SchemedObject,MMSchema
 import abc_schema
-import marshmallow as mm
+import marshmallow as mm # type: ignore
 import dataclasses
+import datetime
 
 class Person(SchemedObject):
 
@@ -16,8 +17,7 @@ class Person(SchemedObject):
 
 p=Person()
 
-for se in p.__get_schema__():
-    print(se.get_name(),se.get_python_type())
+print({se.get_name() : se.get_python_type() for se in p.__get_schema__()})
 
 
 @dataclasses.dataclass
