@@ -1,12 +1,12 @@
 """ ABC Marshmallow Schema examples """
-from marshmallow_schema import SchemedObject,Schema
+from marshmallow_schema import SchemedObject,MMSchema
 import abc_schema
 import marshmallow as mm
 import dataclasses
 
 class Person(SchemedObject):
 
-    class Schema(Schema):
+    class Schema(MMSchema):
         name = mm.fields.Str(required=True)
         email = mm.fields.Email(missing=None)
         sex = mm.fields.Str(validate=mm.fields.validate.OneOf(('m','f','o','?')),missing='?')

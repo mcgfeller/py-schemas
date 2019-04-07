@@ -4,7 +4,7 @@
 """
 
 import typing
-import marshmallow as mm
+import marshmallow as mm # type: ignore
 import decimal
 import datetime
 import abc_schema
@@ -55,22 +55,23 @@ class SchemedObject:
 
     @classmethod
     def __get_schema__(cls):
+        """ get schema attached to class, and cached in cls.__schema. If not cached, instantiate .Schema """
         s = getattr(cls,'__schema',None)
         if s is None:
             sclass = getattr(cls,'Schema',None)
             if sclass is None:
                 raise ValueError('Class must have Schema inner class')
             else:
-                s = cls.__schema = sclass()
-                s.__objclass__ = cls
+                s = cls.__schema = sclass() # instantiate
+                s.__objclass__ = cls # assign this class to schema.__objclass__
         return s
                 
 abc_schema.SchemedObject.register(SchemedObject)
 
 
-class Schema(mm.Schema):
+class MMSchema(mm.Schema):
 
-    SupportedRepresentations: {abc_schema.WellknownRepresentation.python,abc_schema.WellknownRepresentation.json,}
+    SupportedRepresentations = {abc_schema.WellknownRepresentation.python,abc_schema.WellknownRepresentation.json,}
 
     def to_external(self, obj : SchemedObject, destination : abc_schema.WellknownRepresentation, writer_callback : typing.Optional[typing.Callable]=None, **params) -> typing.Optional[typing.Any]:
         """
@@ -95,8 +96,8 @@ class Schema(mm.Schema):
         else:
             return e
 
-
-    def from_external(self, external : typing.Union[typing.Any,typing.Callable], source : abc_schema.WellknownRepresentation, **params ) -> SchemedObject:
+    def from_external(self, external : typing.Union[typing.Any,typing.Callable], source : abc_schema.WellknownRepresentation, 
+        **params ) -> typing.Union[SchemedObject, typing.Dict[typing.Any, typing.Any]]:
 
         """
             If *external* is bytes, they are consumed as source representation.
@@ -112,7 +113,7 @@ class Schema(mm.Schema):
         method = supported.get(source)
         if not method:
             raise ValueError(f'source {source} not supported.')
-        if isinstance(external,typing.Callable):
+        if callable(external):
             external = external(None)
         d = method(external, **params)
         o = self.object_factory(d)
@@ -125,7 +126,7 @@ class Schema(mm.Schema):
             As Schema.validate returns a dict, but we want an error raised, we call .load() instead.
             However, if the validation doesn't raise an error, we return the argument obj unchanged. 
         """
-        s = self.load(self.dump(obj)) # may raise an error
+        dummy = self.load(self.dump(obj)) # may raise an error
         return obj
 
 
@@ -160,6 +161,7 @@ class Schema(mm.Schema):
             default = None if field.missing is not mm.missing else field.missing
             metadata = None 
             dcfield = dataclasses.field(default=default,metadata=metadata)
+            dcfield.type = nclass
             r[name] = dcfield
         return r
 
@@ -172,6 +174,6 @@ class Schema(mm.Schema):
             o = d
         return o
 
-abc_schema.AbstractSchema.register(Schema)
+abc_schema.AbstractSchema.register(MMSchema)
 
 
