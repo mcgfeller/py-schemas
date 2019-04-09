@@ -83,6 +83,21 @@ class AbstractSchema(collections.abc.Iterable,metaclass=abc.ABCMeta):
         """
         return self.as_field_annotations() 
 
+    def get_metadata(self) -> typing.Dict[str,typing.Any]:
+        """ return metadata (aka payload data) for this Schema.
+
+            Meta data is not used at all by the Schema, and is provided as a third-party 
+            extension mechanism. Multiple third-parties can each have their own key, 
+            to use as a namespace in the metadata.
+            (similar to and taken from dataclasses.Field)
+
+            Can be refined; by default an empty dict is returned.
+
+            There is a similar method defined on the AbstractSchemaElement for
+            smetadata attached to a schema element. 
+        """
+        return {} 
+
 
 
 
@@ -103,6 +118,18 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
     def get_name(self) -> str:
         """ get name useable as variable name """
         pass
+
+    def get_metadata(self) -> typing.Dict[str,typing.Any]:
+        """ return metadata (aka payload data) for this SchemaElement.
+
+            Meta data is not used at all by the Schema, and is provided as a third-party 
+            extension mechanism. Multiple third-parties can each have their own key, 
+            to use as a namespace in the metadata.
+            (similar to and taken from dataclasses.Field)
+
+            Can be refined; by default an empty dict is returned.
+        """
+        return {} 
 
     
 

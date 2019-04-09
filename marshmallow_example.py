@@ -11,13 +11,17 @@ class Person(SchemedObject):
         name = mm.fields.Str(required=True)
         email = mm.fields.Email(missing=None)
         sex = mm.fields.Str(validate=mm.fields.validate.OneOf(('m','f','o','?')),missing='?')
-        education = mm.fields.Dict(values=mm.fields.Date(), keys=mm.fields.Str())
+        education = mm.fields.Dict(values=mm.fields.Date(), keys=mm.fields.Str(),payload='field metadata')
 
     __annotations__ = Schema().as_annotations()
 
 p=Person()
 
 print({se.get_name() : se.get_python_type() for se in p.__get_schema__()})
+
+s = p.__get_schema__()
+assert s.fields['name'].get_schema() is s
+assert s.fields['education'].get_metadata() == {'payload': 'field metadata'}
 
 
 @dataclasses.dataclass

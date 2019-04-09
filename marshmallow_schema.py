@@ -13,7 +13,9 @@ import dataclasses
 
 """ Now adapt Marshmallow fields by some monkey patching """
 
-
+def get_schema(self) -> typing.Optional['MMSchema']:
+    """ return the Schema or None """
+    return self.root
 
 def get_python_type(self) -> type:
     """ get native class of field, can be overwritten """
@@ -21,10 +23,18 @@ def get_python_type(self) -> type:
 
 def get_name(self) -> str:
     return self.name
-    
 
+def get_metadata(self) -> typing.Dict[str,typing.Any]:
+    """ return metadata (aka payload data) for this SchemaElement.
+    """
+    return self.metadata 
+
+# monkey-patch all Fields:
+mm.fields.Field.get_schema = get_schema
 mm.fields.Field.get_python_type = get_python_type
 mm.fields.Field.get_name = get_name
+mm.fields.Field.get_metadata = get_metadata
+# monkey-patch specific type Fields:
 mm.fields.FieldABC.python_type = typing.Any
 mm.fields.Str.python_type = str
 mm.fields.Integer.python_type = int
@@ -51,6 +61,10 @@ mm.fields.Dict.get_python_type = _dict_get_python_type
 class SchemedObject:
     """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
         Schema. It defines one class method .__get_schema__, to return that Schema.
+
+        By convention of this implementation, the Schema is obtained as an inner class named Schema.
+        The Schema is instantiated and cached as .__schema. __objclass__ is set in the Schema so
+        that .object_factory() can create an instance. 
     """
 
     @classmethod
@@ -173,6 +187,14 @@ class MMSchema(mm.Schema):
         else:
             o = d
         return o
+
+    def get_metadata(self) -> typing.Dict[str,typing.Any]:
+        """ return metadata (aka payload data) for this Schema.
+            Meta data is not used at all by the Schema, and is provided as a third-party 
+            extension mechanism. Multiple third-parties can each have their own key, 
+            to use as a namespace in the metadata (similar to and taken from dataclasses.Field)
+        """
+        return self.context
 
 abc_schema.AbstractSchema.register(MMSchema)
 
