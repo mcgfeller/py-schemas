@@ -24,7 +24,7 @@ def get_python_type(self) -> type:
 def get_name(self) -> str:
     return self.name
 
-def get_metadata(self) -> typing.Dict[str,typing.Any]:
+def get_metadata(self) -> typing.MutableMapping[str,typing.Any]:
     """ return metadata (aka payload data) for this SchemaElement.
     """
     return self.metadata 
@@ -188,7 +188,7 @@ class MMSchema(mm.Schema):
             o = d
         return o
 
-    def get_metadata(self) -> typing.Dict[str,typing.Any]:
+    def get_metadata(self) -> typing.MutableMapping[str,typing.Any]:
         """ return metadata (aka payload data) for this Schema.
             Meta data is not used at all by the Schema, and is provided as a third-party 
             extension mechanism. Multiple third-parties can each have their own key, 
