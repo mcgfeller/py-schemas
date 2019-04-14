@@ -18,12 +18,14 @@ class SchemedObject(metaclass=abc.ABCMeta):
 
 class WellknownRepresentation(enum.Enum):
 
-    python = "__python__"  # internal python structures
-    pickle = "application/python-pickle"
-    json = "application/json"
-    xml = "application/xml"
-    sql = "application/sql"
-    html = "text/html"
+    # fmt: off
+    python  = "__python__"  # internal python structures
+    pickle  = "application/python-pickle"
+    json    = "application/json"
+    xml     = "application/xml"
+    sql     = "application/sql"
+    html    = "text/html"
+    # fmt: on
 
 
 class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
