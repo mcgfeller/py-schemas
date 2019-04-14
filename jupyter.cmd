@@ -1,0 +1,1 @@
+"C:\Program Files\Python37\Scripts\jupyter-notebook.exe" --notebook-dir=%~dp0
