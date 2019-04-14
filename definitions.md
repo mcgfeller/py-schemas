@@ -20,3 +20,6 @@ The Schema element contains
 - A Schema may be associated with zero or many Python objects (mostly class instances, but potentially other values such as dict or strings or streams representing a document), by a mechanism not specified in this proposal. 
 - Vice versa, a Python value or a Python object may be associated with a Schema. 
   - In fact, we propose a _protocol_ to retrieve the Schema associated with Python class. 
+
+## Schema solution
+- A library enabling to create and use a schema. See [Existing Solutions](ExistingSolutions.md).

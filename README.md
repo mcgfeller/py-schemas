@@ -1,11 +1,15 @@
 # py-schemas
 
 
-This is a working document to propose a unfication of Schemas used in Python. 
+This is a working document to propose a minimal standard for interoperability of Schemas used in Python. 
 
 It expand on the ideas put forth in my [Dec 17 Blog Post on Python Schemas](https://ict.swisscom.ch/2017/12/python-schema/) and on growing frustrations with special-purpose schemas. 
 
 # Goals
+
+Despite the popularity of "schema-less" databases, Schemas are needed to validate data and to exchange data with others. The primary goal of this proposal is **interoperability**: Use some package that employs a schema written in a schema solution, without re-coding the schema. 
+
+For example, use an SQLalchemy-schemed object as a `Nested` field in a Marshmallow schema, allowing serialization to JSON. The emphasis is on using Schemas, without prescribing how Schema libraries organize their internals, and how schemas are constructed using these libraries.  
 
 ## PEP
 
@@ -23,7 +27,8 @@ Python typing only allows declaration of uniform value types for dictionaries (i
 
 The current proposal is contained in a Jupyter Notebook: [A minimal standard for interoperable Schemas](SchemaProtocol.ipynb).
 
-The minimal standard is defined as a Protocol, with some Abstract Base Classes. The protocol is minimal in that it provides for the most common [Use Cases(UseCases.md):
+The minimal standard is defined as a Protocol, with some Abstract Base Classes. The protocol is minimal in that it provides for the most common 
+[Use Cases](UseCases.md):
 * Serialization to an external representation
 * Deserialization from an external representation
 * Validation
