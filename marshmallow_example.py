@@ -22,11 +22,18 @@ class Person(SchemedObject):
 
 p = Person()
 
+# Schema manipulations:
 print({se.get_name(): se.get_python_type() for se in p.__get_schema__()})
 
 s = p.__get_schema__()
 assert s.fields["name"].get_schema() is s
 assert s.fields["education"].get_metadata() == {"payload": "field metadata"}
+
+field = s.fields["education"]
+mm.fields.Field.from_schema_element(field)
+
+# create another Marshmallow schema from s, only using the protocol API to access s:
+s2 = MMSchema.from_schema(s) 
 
 
 @dataclasses.dataclass
@@ -40,3 +47,6 @@ dcp_s = dcp.__get_schema__()
 j = dcp_s.to_external(dcp, abc_schema.WellknownRepresentation.json)
 o = dcp_s.from_external(j, abc_schema.WellknownRepresentation.json)
 dcp_s.validate_internal(dcp)
+
+# s2 validates as well, but will not recognize bad EMail, because there is no EMail field in Python
+s2.validate_internal(dcp) 

@@ -114,6 +114,20 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         return {}
 
+    @classmethod
+    @abc.abstractmethod
+    def from_schema(cls, schema: "AbstractSchema") -> "AbstractSchema":
+        """ Optional API: create a new Schema (in the Schema dialect of the cls) from
+            a schema in any Schema Dialect.
+        """
+        pass
+
+    @abc.abstractmethod
+    def add_element(self, element: "AbstractSchemaElement"):
+        """ Optional API: Add a Schema element (in any Schema Dialect) to this Schema. 
+        """
+        pass
+
 
 class AbstractSchemaElement(metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -142,4 +156,14 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
             Can be refined; by default an empty dict is returned.
         """
         return {}
+
+    @classmethod
+    @abc.abstractmethod
+    def from_schema_element(
+        cls, schema_element: "AbstractSchemaElement"
+    ) -> "AbstractSchemaElement":
+        """ Optional API: create a new AbstractSchemaElement (in the Schema dialect of the cls) from
+            a AbstractSchemaElement in any Schema Dialect.
+        """
+        pass
 
