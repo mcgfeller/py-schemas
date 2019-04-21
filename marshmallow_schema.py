@@ -177,7 +177,7 @@ def _dict_type_factory(
     kc = from_python_type(pt.__args__[0])
     vc = from_python_type(pt.__args__[1])
     return cls(
-        kc, vc, required=required, missing=default, default=default, metadata=metadata
+        keys=kc, values=vc, required=required, missing=default, default=default, metadata=metadata
     )
 
 

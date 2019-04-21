@@ -1,4 +1,4 @@
-""" Protocol for Schemaa """
+""" Protocol for Schema """
 
 import abc
 import typing
@@ -30,7 +30,7 @@ class WellknownRepresentation(enum.Enum):
 
 
 class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
-    """ The AbstractSchema does not prescribe how the Schema is organizred, and
+    """ The AbstractSchema does not prescribe how the Schema is organized, and
         only prescribes that the AbstractSchemaElement may be obtained by iterating
         over the Schema.
     """
@@ -98,7 +98,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         return {se.get_name(): se.get_python_field() for se in self}
 
-    def get_metadata(self) -> typing.Dict[str, typing.Any]:
+    def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
 
             Meta data is not used at all by the Schema, and is provided as a third-party 
@@ -153,7 +153,7 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         dcfield.type = self.get_python_type()
         return dcfield
 
-    def get_metadata(self) -> typing.Dict[str, typing.Any]:
+    def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
 
             Meta data is not used at all by the Schema, and is provided as a third-party 
