@@ -16,7 +16,7 @@ class Person(SchemedObject):
             validate=mm.fields.validate.OneOf(("m", "f", "o", "?")), missing="?"
         )
         education = mm.fields.Dict(
-            values=mm.fields.Date(), keys=mm.fields.Str(), payload="field metadata"
+            keys=mm.fields.Str(), values=mm.fields.Date(), payload="field metadata"
         )
 
     __annotations__ = Schema().as_annotations()
@@ -35,7 +35,7 @@ field = s.fields["education"]
 mm.fields.Field.from_schema_element(field)
 
 # create another Marshmallow schema from s, only using the protocol API to access s (round trip): 
-s2 = MMSchema.from_schema(s)
+scopy = MMSchema.from_schema(s)
 
 
 @dataclasses.dataclass
@@ -46,7 +46,8 @@ class DCPerson(Person):
 # mypy cannot handle this dynamic typing without a plugin.
 # Note we need to set dob=None, as dataclasses cannot handle optional fields, 
 # but since the type is optional, it's a valid value.
-dcp = DCPerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={}) # type: ignore 
+dcp = DCPerson(name="Martin", email="mgf@acm.org", sex="m", dob=None,  # type: ignore 
+    education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)})
 
 
 dcp_s = dcp.__get_schema__()
@@ -54,5 +55,5 @@ j = dcp_s.to_external(dcp, abc_schema.WellknownRepresentation.json)
 o = dcp_s.from_external(j, abc_schema.WellknownRepresentation.json)
 dcp_s.validate_internal(dcp)
 
-# s2 validates as well, but will not recognize bad EMail, because there is no EMail field in Python
-s2.validate_internal(dcp)
+#  scopy validates as well, but will not recognize bad EMail, because there is no EMail field in Python
+scopy.validate_internal(dcp)
