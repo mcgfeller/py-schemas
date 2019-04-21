@@ -4,6 +4,7 @@ import abc
 import typing
 import collections.abc
 import enum
+import dataclasses
 
 
 class SchemedObject(metaclass=abc.ABCMeta):
@@ -83,7 +84,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """ iterator through SchemaElements in this Schema """
         pass
 
-    def as_annotations(self) -> typing.Dict[str, type]:
+    def as_annotations(self) -> typing.Dict[str, typing.Type]:
         """ return Schema Elements in annotation format.
             Use as class.__annotations__ = schema.as_annotations()
             I would wish that __annotations__ is a protocol that can be provided,
@@ -91,13 +92,11 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         return {se.get_name(): se.get_python_type() for se in self}
 
-    def as_field_annotations(self) -> typing.Dict[str, type]:
+    def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
         """ return Schema Elements in DataClass field annotation format.
             Use as class.__annotations__ = schema.as_field_annotations().
-
-            Equivalent to as_annotations unless refined in a subclass, 
         """
-        return self.as_field_annotations()
+        return {se.get_name(): se.get_python_field() for se in self}
 
     def get_metadata(self) -> typing.Dict[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
@@ -136,14 +135,23 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def get_name(self) -> str:
+        """ get name useable as variable name """
+        pass
+
+    @abc.abstractmethod
     def get_python_type(self) -> type:
         """ get Python type of this AbstractSchemaElement """
         pass
 
     @abc.abstractmethod
-    def get_name(self) -> str:
-        """ get name useable as variable name """
-        pass
+    def get_python_field(self) -> dataclasses.Field:
+        """ get Python dataclasses.Field corresponding to AbstractSchemaElement.
+            Unless refined, just packs type into a Field and attaches metadata. 
+        """
+        dcfield = dataclasses.field(metadata=self.get_metadata())
+        dcfield.type = self.get_python_type()
+        return dcfield
 
     def get_metadata(self) -> typing.Dict[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.

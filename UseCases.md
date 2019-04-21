@@ -51,6 +51,10 @@ A Schema Element may be used to define an individual data item, independtly from
 
 A Schema may be transformed to another Schema notation; either within Python or to an external Schema-like definition (e.g., [XML Schema](https://en.wikipedia.org/wiki/XML_Schema_(W3C)), [JSON Schema](https://json-schema.org/), [OpenAPI SchemaObject](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#schemaObject)) 
 
+### Round trip
+
+Transforming a Schema to another Python-based Schema notation, only using protocol facilities. If the source and target Schema are the same (i.e., transforming to itself using only protocol facilities), *round trip fidelity* is achieved when source and target schema are identical. As the protocol is unlikely to cover all features of a Schema solution, round trip fidelity cannot be achieved except for rather simple Schema solutions.
+
 ## Use Case: Associate data with Schema or Schema Elements
 
 A Schema or Schema Element may be used to hold additional data. Such data is specific to the Schema and not to any objects corresponding to the Schema. The associated data is not used for transformation,  validation or type checking. 

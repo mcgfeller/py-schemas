@@ -19,13 +19,30 @@ def get_schema(self) -> typing.Optional["MMSchema"]:
     return self.root
 
 
+def get_name(self) -> str:
+    return self.name
+
+
 def get_python_type(self) -> typing.Type:
-    """ get native class of field, can be overwritten """
+    """ get native type of field. 
+
+    """
     return FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
 
 
-def get_name(self) -> str:
-    return self.name
+def get_python_field(self) -> dataclasses.Field:
+    """ get Python dataclasses.Field corresponding to SchemaElement.
+        Fills default if provided in field. If field is not required and there is no default, make type Optional.
+    """
+    pytype = self.get_python_type()
+    # mm.missing -> dataclasses.MISSING>
+    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
+    
+    if (not self.required) and default is dataclasses.MISSING:
+        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
+    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
+    dcfield.type = pytype
+    return dcfield
 
 
 def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
@@ -46,18 +63,31 @@ def from_schema_element(
 
     """
     metadata = schema_element.get_metadata()
-    pt = schema_element.get_python_type()
-    se = from_python_type(pt, metadata)
-    if se:
-        return se
+    pf = schema_element.get_python_field()
+    pt = pf.type
+    required = True
+
+    # Determine whether pt is an Optional type, which is a Union[pt,None] 
+    # typing has very limited inspection features: 
+    if getattr(pt, "__origin__", None) is typing.Union:  # is this typing.Union?
+        if len(pt.__args__) == 2 and pt.__args__[1] in (
+            None,
+            None.__class__,
+        ):  # Optional type
+            pt = pt.__args__[0]  # actual type
+            required = False # optional means it's not required
+
+    mmf = from_python_type(pt, required, pf.default, metadata)
+    if mmf:
+        return mmf
     else:
         raise ValueError(
-            f"Cannot determine Marshmallow field for python type {pt} in element {schema_element}"
+            f"Cannot determine Marshmallow field for dataclassed.Field {pf} with type {pt} in element {schema_element}"
         )
 
 
 def from_python_type(
-    pt: type, metadata: dict = None
+    pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: dict = None
 ) -> typing.Optional[mm.fields.Field]:
     """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
         We first check the special _name convention for typing.Type, 
@@ -73,18 +103,24 @@ def from_python_type(
         if not field_class:
             return None
 
+    if default is dataclasses.MISSING:  # dataclasses.MISSING ->  mm.missing
+        default = mm.missing
+
     type_factory = getattr(field_class, "_type_factory", None)
     if type_factory:
-        se = type_factory(pt, metadata=metadata)
+        mmf = type_factory(pt, required=required, default=default, metadata=metadata)
     else:
-        se = field_class(metadata=metadata)
-    return se
+        mmf = field_class(
+            required=required, missing=default, default=default, metadata=metadata
+        )
+    return mmf
 
 
 # monkey-patch all Fields:
 mm.fields.Field.get_schema = get_schema
-mm.fields.Field.get_python_type = get_python_type
 mm.fields.Field.get_name = get_name
+mm.fields.Field.get_python_type = get_python_type
+mm.fields.Field.get_python_field = get_python_field
 mm.fields.Field.get_metadata = get_metadata
 mm.fields.Field.from_schema_element = classmethod(from_schema_element)
 
@@ -130,16 +166,20 @@ def _dict_get_python_type(self) -> type:
         if isinstance(self.value_container, mm.fields.FieldABC)
         else typing.Type[typing.Any]
     )
-    return typing.Dict[kt, vt]
+    return typing.Dict[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
 
 
-def _dict_type_factory(cls, pt: typing.Type, metadata: dict) -> mm.fields.Field:
+def _dict_type_factory(
+    cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
+) -> mm.fields.Field:
     """ get MM fields.Dict from Python type. 
         get key class and value class (both can be None), then construct Dict.
     """
     kc = from_python_type(pt.__args__[0])
     vc = from_python_type(pt.__args__[1])
-    return cls(kc, vc, metadata=metadata)
+    return cls(
+        kc, vc, required=required, missing=default, default=default, metadata=metadata
+    )
 
 
 mm.fields.Dict.get_python_type = _dict_get_python_type
@@ -250,34 +290,6 @@ class MMSchema(mm.Schema):
             field.name = name
             yield field
 
-    def as_annotations(self):
-        """ return Schema Elements in annotation format.
-            Use as class.__annotations__ = schema.as_annotations()
-            I would wish that __annotations__ is a protocol that can be provided, instead of simply assuming it is a mapping. 
-        """
-        r = {}
-        for name, field in self._declared_fields.items():
-            nclass = field.get_python_type()
-            if not field.required:
-                if field.missing is not mm.missing:  # this is dummy!
-                    nclass = typing.Union[nclass, type(field.missing)]
-            r[name] = nclass
-        return r
-
-    def as_field_annotations(self):
-        """ return Schema Elements in dataclass field annotation format.
-            Use as class.__annotations__ = schema.as_annotations()
-        """
-        r = {}
-        for name, field in self._declared_fields.items():
-            nclass = field.get_python_type()
-            default = None if field.missing is not mm.missing else field.missing
-            metadata = None
-            dcfield = dataclasses.field(default=default, metadata=metadata)
-            dcfield.type = nclass
-            r[name] = dcfield
-        return r
-
     def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
         """ return an object from dict, according to the Schema's __objclass__ """
         objclass = getattr(self, "__objclass__", None)
@@ -294,6 +306,18 @@ class MMSchema(mm.Schema):
             to use as a namespace in the metadata (similar to and taken from dataclasses.Field)
         """
         return self.context
+
+    def as_annotations(self) -> typing.Dict[str, typing.Type]:
+        """ return Schema Elements in annotation format.
+            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
+        """
+        return {se.get_name(): se.get_python_type() for se in self}
+
+    def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
+        """ return Schema Elements in DataClass field annotation format. 
+            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
+        """
+        return {se.get_name(): se.get_python_field() for se in self}
 
     @classmethod
     def from_schema(cls, schema: abc_schema.AbstractSchema) -> "MMSchema":
