@@ -35,9 +35,13 @@ The minimal standard is defined as a Protocol, with some Abstract Base Classes. 
 * Obtaining Schema elements
 * Static type checking
   * Get the Python type of a schema element 
+* Minimal Schema transformation:
+  * Get [dataclasses.Field](https://docs.python.org/3/library/dataclasses.html#dataclasses.Field) of a schema element
+  * Construct a a Schema element from dataclasses.Field
+  * Construct a Schema from another Schema (from another Schema solution) by going through dataclasses.Field for each element. 
 * Associate data with Schema
 
-The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. It does not provide conversion of arbitrary Schema features between schema libraries, but it provides conversion to Python static types. See [Alternatives considered](alternatives.md).
+The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. It does provide minumal conversion of arbitrary Schema features between schema libraries, as it provides conversion to Python static types and dataclasses.Fields. See [Alternatives considered](alternatives.md).
 
 
 
