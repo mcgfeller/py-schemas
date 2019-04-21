@@ -11,7 +11,7 @@ class Person(SchemedObject):
     class Schema(MMSchema):
         name = mm.fields.Str(required=True)
         email = mm.fields.Email(missing=None)
-        dob = mm.fields.Date(required=False)
+        dob = mm.fields.Date(required=False,missing=None)
         sex = mm.fields.Str(
             validate=mm.fields.validate.OneOf(("m", "f", "o", "?")), missing="?"
         )

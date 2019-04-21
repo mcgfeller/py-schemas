@@ -11,7 +11,7 @@ import abc_schema
 import dataclasses
 
 
-""" Now adapt Marshmallow fields by some monkey patching """
+""" Methods for Marshmallow fields (will be monkey-patched) """
 
 
 def get_schema(self) -> typing.Optional["MMSchema"]:
@@ -45,7 +45,7 @@ def get_python_field(self) -> dataclasses.Field:
     return dcfield
 
 
-def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
+def get_metadata(self) -> typing.Mapping[str, typing.Any]:
     """ return metadata (aka payload data) for this SchemaElement.
     """
     return self.metadata
@@ -54,7 +54,7 @@ def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
 def from_schema_element(
     cls, schema_element: abc_schema.AbstractSchemaElement
 ) -> mm.fields.Field:
-    """ Create a new Marshmallow Field from
+    """ Classmethod: Create a new Marshmallow Field from
         a AbstractSchemaElement in any Schema Dialect.
 
         In a real implementation, we could return schema_element unchanged
@@ -62,7 +62,6 @@ def from_schema_element(
         rely on the protocol API here. 
 
     """
-    metadata = schema_element.get_metadata()
     pf = schema_element.get_python_field()
     pt = pf.type
     required = True
@@ -77,7 +76,7 @@ def from_schema_element(
             pt = pt.__args__[0]  # actual type
             required = False # optional means it's not required
 
-    mmf = from_python_type(pt, required, pf.default, metadata)
+    mmf = from_python_type(pt, required, pf.default, pf.metadata)
     if mmf:
         return mmf
     else:
@@ -87,7 +86,7 @@ def from_schema_element(
 
 
 def from_python_type(
-    pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: dict = None
+    pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: typing.Mapping[str, typing.Any] = None
 ) -> typing.Optional[mm.fields.Field]:
     """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
         We first check the special _name convention for typing.Type, 
@@ -323,6 +322,7 @@ class MMSchema(mm.Schema):
     def from_schema(cls, schema: abc_schema.AbstractSchema) -> "MMSchema":
         """ Create a new Marshmallow Schema from a schema in any Schema Dialect.
             Unfortunately, Marshmallow has no API to add fields, so we use internal APIs. 
+            See https://github.com/marshmallow-code/marshmallow/issues/1201.
         """
         s = MMSchema(context=schema.get_metadata())  # base Schema
         # add fields
@@ -330,12 +330,13 @@ class MMSchema(mm.Schema):
             element.get_name(): mm.fields.Field.from_schema_element(element)
             for element in schema
         }
-        s.fields = s._init_fields()  # invoke internal API to bind fields
+        s.fields = s._init_fields()  # invoke internal API to bind fields 
         return s
 
     def add_element(self, element: abc_schema.AbstractSchemaElement):
         """ Add a Schema element to this Schema.
             We're afraid to use internal API to add additional fields.
+            See https://github.com/marshmallow-code/marshmallow/issues/1201.
             This API is optional, after all.
         """
         raise NotImplementedError("Marshmallow API doesn't support adding fields")
