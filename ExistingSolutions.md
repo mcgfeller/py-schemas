@@ -13,4 +13,5 @@ Name | Framework | Main Purpose | Formats | Validation | Un/Serialization | Obje
 [valider](https://github.com/podio/valideer) | standalone | Python data validation and adaption | Python dict | x | x | | [George Sakkis](https://github.com/gsakkis) | extensible | 
 [voluptuous](https://github.com/alecthomas/voluptuous) | standalone | Python data validation | Python dict | x | - | - | [Alec Thomas](alec@swapoff.org)|
 [DB API type codes](https://www.python.org/dev/peps/pep-0249/#description) | DB API | SQL interface | SQL | - | x | x | . | | on single fields | 
+[PEP 593](https://www.python.org/dev/peps/pep-0593) | Python typing | Flexible function and variable annotations | Python types | - | - | - | [Till Varoquaux](till@fb.com), [Konstantin Kashin](kkashin@fb.com) |  | 
 
