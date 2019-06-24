@@ -29,6 +29,7 @@ Define a minimal common Schema Element (instead of using `dataclasses.Field`), w
 
 and less straight-forward:
 - validation function
+  - what's a generic, yet simple signature?
 - sub elements:
   - container type:
     - key, value

@@ -2,6 +2,7 @@
 
 import abc
 import typing
+import typing_extensions
 import collections.abc
 import enum
 import dataclasses
@@ -84,13 +85,15 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """ iterator through SchemaElements in this Schema """
         pass
 
-    def as_annotations(self) -> typing.Dict[str, typing.Type]:
+    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
         """ return Schema Elements in annotation format.
+            If include_extras (PEP-593) is True, the types returned are typing.Annotated types.
+
             Use as class.__annotations__ = schema.as_annotations()
             I would wish that __annotations__ is a protocol that can be provided,
             instead of simply assuming it is a mapping. 
         """
-        return {se.get_name(): se.get_python_type() for se in self}
+        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
 
     def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
         """ return Schema Elements in DataClass field annotation format.
@@ -145,13 +148,11 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_python_field(self) -> dataclasses.Field:
-        """ get Python dataclasses.Field corresponding to AbstractSchemaElement.
-            Unless refined, just packs type into a Field and attaches metadata. 
-        """
-        dcfield = dataclasses.field(metadata=self.get_metadata())
-        dcfield.type = self.get_python_type()
-        return dcfield
+    def get_annotation(self) -> 'SchemaAnnotation':
+        """ get SchemaAnnotation of this AbstractSchemaElement """
+        pass
+
+
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
@@ -174,4 +175,61 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
             a AbstractSchemaElement in any Schema Dialect.
         """
         pass
+
+
+    def get_annotated(self) -> type:
+        """ get PEP-593 typing.Annotated type """
+        return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
+    
+
+    def get_python_field(self) -> dataclasses.Field:
+        """ get Python dataclasses.Field corresponding to AbstractSchemaElement.
+            Unless refined, just packs type and default into a Field and attaches metadata. 
+        """
+        ann = self.get_annotated()
+        default = dataclasses.MISSING if ann.default is MISSING else ann.default # switch our MISSING to dataclasses.MISSING
+        dcfield = dataclasses.field(default=default,metadata=self.get_metadata())
+        dcfield.type = self.get_python_type()
+        return dcfield
+
+# A sentinel object to detect if a parameter is supplied or not.  Use
+# a class to give it a better repr.
+class _MISSING_TYPE:
+    pass
+MISSING = _MISSING_TYPE()
+
+
+class SchemaAnnotation:
+    """ Annotation holding SchemaElement information to go as 2nd parameter into typing_extensions.Annotated """
+
+    def __init__(self,required : bool=False ,default : typing.Any=MISSING,validate: typing.Optional[typing.Callable] =None, metadata: typing.Mapping[str, typing.Any]):
+        """ SchemaAnnotation 
+            default is the internal form of the default value, or MISSING
+            validate is a callable with signature of .validate().
+        """
+        self.required = required
+        self.default = default
+        if validate is not None:
+            self.validate = validate
+        self.metadata = metadata
+        
+
+    @staticmethod
+    def validate(schemaElement : AbstractSchemaElement, external: typing.Any, source: WellknownRepresentation, **params) -> typing.Any:
+        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
+            The arguments are the same as in AbstracrSchema.from_external(). Params must be passed down. 
+
+            Default implementation:
+            
+            Passes external to schemaElement.get_python_type() by default.
+        """
+        if not element:
+            if default is not MISSING:
+                internal = self.default
+            elif self.required:
+                raise ValueError('required element must be supplied')
+        else:
+            pt = schemaElement.get_python_type()
+            internal = pt(external)
+        return internal
 
