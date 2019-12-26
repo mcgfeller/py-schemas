@@ -1,4 +1,5 @@
-My own list, from https://ict.swisscom.ch/2017/12/python-schema/ - all interpretations are mine. 
+My own list, from https://ict.swisscom.ch/2017/12/python-schema/ - all interpretations are mine. There are now many tools, which makes it hard to follow them all and underlines the importance of interoperability. 
+
 
 Name | Framework | Main Purpose | Formats | Validation | Un/Serialization | Object recreation | Contact | Comments
 ---- | --------- | ------------ | ------- | ---------- | ---------------- | ----------------- | --------| --------
@@ -10,6 +11,8 @@ Name | Framework | Main Purpose | Formats | Validation | Un/Serialization | Obje
 [Colander](https://docs.pylonsproject.org/projects/colander/en/latest/) | Pyramid | Serialization | XML, HTML, JSON  | x | x | x | [Github Issue](https://github.com/Pylons/colander/issues) |
 [KIM](https://kim.readthedocs.io/en/latest/) | standalone | JSON serialization and validation | JSON  | x | x | x | Abandoned? [Github Issue](https://github.com/mikeywaites/kim/issues) |
 [schema](https://pypi.org/project/schema/) | standalone | Python data validation | Python data | x | via converters | - | [Vladimir Keleshev](mailto:vladimir@keleshev.com) |
+[Schematics](https://schematics.readthedocs.io/en/latest/) | standalone | Validation, conversion | Python, language agnostic | x | x | x | [Kalle Tuure](kalle@goodtimes.fi) | "for Humans" philosophy. |
+[TypeSystem](https://www.encode.io/typesystem/)| Encode | validation, du/serialization, forms | Python dict , JSON, YAML | x | x | ? | [Tom Christie](mailto:tom@tomchristie.com) |
 [valider](https://github.com/podio/valideer) | standalone | Python data validation and adaption | Python dict | x | x | | [George Sakkis](https://github.com/gsakkis) | extensible | 
 [voluptuous](https://github.com/alecthomas/voluptuous) | standalone | Python data validation | Python dict | x | - | - | [Alec Thomas](alec@swapoff.org)|
 [DB API type codes](https://www.python.org/dev/peps/pep-0249/#description) | DB API | SQL interface | SQL | - | x | x | . | | on single fields | 
