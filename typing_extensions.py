@@ -6,15 +6,16 @@ import typing
 import collections.abc as collections_abc
 import operator
 
+# These are used by Protocol implementation
+# We use internal typing helpers here, but this significantly reduces
+# code duplication. (Also this is only until Protocol is in typing.)
+from typing import Generic, Callable, TypeVar, Tuple
+
 # After PEP 560, internal typing API was substantially reworked.
 # This is especially important for Protocol class which uses internal APIs
 # quite extensivelly.
 PEP_560 = sys.version_info[:3] >= (3, 7, 0)
 
-# These are used by Protocol implementation
-# We use internal typing helpers here, but this significantly reduces
-# code duplication. (Also this is only until Protocol is in typing.)
-from typing import Generic, Callable, TypeVar, Tuple
 if PEP_560:
     GenericMeta = TypingMeta = type
 else:
@@ -25,19 +26,23 @@ try:
 except ImportError:
     OLD_GENERICS = True
 try:
-    from typing import _subs_tree
+    from typing import _subs_tree  # noqa
     SUBS_TREE = True
 except ImportError:
     SUBS_TREE = False
 try:
     from typing import _tp_cache
 except ImportError:
-    _tp_cache = lambda x: x
+    def _tp_cache(x):
+        return x
 try:
     from typing import _TypingEllipsis, _TypingEmpty
 except ImportError:
-    class _TypingEllipsis: pass
-    class _TypingEmpty: pass
+    class _TypingEllipsis:
+        pass
+
+    class _TypingEmpty:
+        pass
 
 
 # The two functions below are copies of typing internal helpers.
@@ -129,6 +134,7 @@ __all__ = [
     'Counter',
     'Deque',
     'DefaultDict',
+    'TypedDict',
 
     # One-off things.
     'final',
@@ -154,7 +160,7 @@ if HAVE_ANNOTATED:
 HAVE_PROTOCOLS = sys.version_info[:3] != (3, 5, 0)
 
 if HAVE_PROTOCOLS:
-    __all__.extend(['Protocol', 'runtime'])
+    __all__.extend(['Protocol', 'runtime', 'runtime_checkable'])
 
 
 # TODO
@@ -348,32 +354,34 @@ else:
 
         __type__ = None
 
-if sys.version_info[:2] >= (3, 7):
+# On older versions of typing there is an internal class named "Final".
+if hasattr(typing, 'Final') and sys.version_info[:2] >= (3, 7):
+    Final = typing.Final
+elif sys.version_info[:2] >= (3, 7):
     class _FinalForm(typing._SpecialForm, _root=True):
 
         def __repr__(self):
             return 'typing_extensions.' + self._name
 
         def __getitem__(self, parameters):
-            item = _type_check(parameters,
-                               '{} accepts only single type'.format(self._name))
+            item = typing._type_check(parameters,
+                                      '{} accepts only single type'.format(self._name))
             return _GenericAlias(self, (item,))
 
-    Final = _FinalForm('Final', doc=
-        """A special typing construct to indicate that a name
-        cannot be re-assigned or overridden in a subclass.
-        For example:
+    Final = _FinalForm('Final',
+                       doc="""A special typing construct to indicate that a name
+                       cannot be re-assigned or overridden in a subclass.
+                       For example:
 
-            MAX_SIZE: Final = 9000
-            MAX_SIZE += 1  # Error reported by type checker
+                           MAX_SIZE: Final = 9000
+                           MAX_SIZE += 1  # Error reported by type checker
 
-            class Connection:
-                TIMEOUT: Final[int] = 10
-            class FastConnector(Connection):
-                TIMEOUT = 1  # Error reported by type checker
+                           class Connection:
+                               TIMEOUT: Final[int] = 10
+                           class FastConnector(Connection):
+                               TIMEOUT = 1  # Error reported by type checker
 
-        There is no runtime checking of these properties.
-        """)
+                       There is no runtime checking of these properties.""")
 elif hasattr(typing, '_FinalTypingBase'):
     class _Final(typing._FinalTypingBase, _root=True):
         """A special typing construct to indicate that a name
@@ -499,27 +507,30 @@ else:
         __type__ = None
 
 
-def final(f):
-    """This decorator can be used to indicate to type checkers that
-    the decorated method cannot be overridden, and decorated class
-    cannot be subclassed. For example:
+if hasattr(typing, 'final'):
+    final = typing.final
+else:
+    def final(f):
+        """This decorator can be used to indicate to type checkers that
+        the decorated method cannot be overridden, and decorated class
+        cannot be subclassed. For example:
 
-        class Base:
+            class Base:
+                @final
+                def done(self) -> None:
+                    ...
+            class Sub(Base):
+                def done(self) -> None:  # Error reported by type checker
+                    ...
             @final
-            def done(self) -> None:
+            class Leaf:
                 ...
-        class Sub(Base):
-            def done(self) -> None:  # Error reported by type checker
+            class Other(Leaf):  # Error reported by type checker
                 ...
-        @final
-        class Leaf:
-            ...
-        class Other(Leaf):  # Error reported by type checker
-            ...
 
-    There is no runtime checking of these properties.
-    """
-    return f
+        There is no runtime checking of these properties.
+        """
+        return f
 
 
 def IntVar(name):
@@ -527,7 +538,7 @@ def IntVar(name):
 
 
 if hasattr(typing, 'Literal'):
-    Literal = typing.Literal 
+    Literal = typing.Literal
 elif sys.version_info[:2] >= (3, 7):
     class _LiteralForm(typing._SpecialForm, _root=True):
 
@@ -537,19 +548,19 @@ elif sys.version_info[:2] >= (3, 7):
         def __getitem__(self, parameters):
             return _GenericAlias(self, parameters)
 
-    Literal = _LiteralForm('Literal', doc=
-        """A type that can be used to indicate to type checkers that the
-        corresponding value has a value literally equivalent to the
-        provided parameter. For example:
+    Literal = _LiteralForm('Literal',
+                           doc="""A type that can be used to indicate to type checkers
+                           that the corresponding value has a value literally equivalent
+                           to the provided parameter. For example:
 
-            var: Literal[4] = 4
-        
-        The type checker understands that 'var' is literally equal to the
-        value 4 and no other value.
+                               var: Literal[4] = 4
 
-        Literal[...] cannot be subclassed. There is no runtime checking
-        verifying that the parameter is actually a value instead of a type.
-        """)
+                           The type checker understands that 'var' is literally equal to
+                           the value 4 and no other value.
+
+                           Literal[...] cannot be subclassed. There is no runtime
+                           checking verifying that the parameter is actually a value
+                           instead of a type.""")
 elif hasattr(typing, '_FinalTypingBase'):
     class _Literal(typing._FinalTypingBase, _root=True):
         """A type that can be used to indicate to type checkers that the
@@ -557,7 +568,7 @@ elif hasattr(typing, '_FinalTypingBase'):
         provided parameter. For example:
 
             var: Literal[4] = 4
-        
+
         The type checker understands that 'var' is literally equal to the
         value 4 and no other value.
 
@@ -651,7 +662,7 @@ else:
         provided parameter. For example:
 
             var: Literal[4] = 4
-        
+
         The type checker understands that 'var' is literally equal to the
         value 4 and no other value.
 
@@ -1064,13 +1075,19 @@ def _gorg(cls):
 
 
 if OLD_GENERICS:
-    def _next_in_mro(cls):
+    def _next_in_mro(cls):  # noqa
         """This function exists for compatibility with old typing versions."""
         next_in_mro = object
         for i, c in enumerate(cls.__mro__[:-1]):
             if isinstance(c, GenericMeta) and _gorg(c) is Generic:
                 next_in_mro = cls.__mro__[i + 1]
         return next_in_mro
+
+
+_PROTO_WHITELIST = ['Callable', 'Awaitable',
+                    'Iterable', 'Iterator', 'AsyncIterable', 'AsyncIterator',
+                    'Hashable', 'Sized', 'Container', 'Collection', 'Reversible',
+                    'ContextManager', 'AsyncContextManager']
 
 
 def _get_protocol_attrs(cls):
@@ -1096,7 +1113,9 @@ def _is_callable_members_only(cls):
     return all(callable(getattr(cls, attr, None)) for attr in _get_protocol_attrs(cls))
 
 
-if HAVE_PROTOCOLS and not PEP_560:
+if hasattr(typing, 'Protocol'):
+    Protocol = typing.Protocol
+elif HAVE_PROTOCOLS and not PEP_560:
     class _ProtocolMeta(GenericMeta):
         """Internal metaclass for Protocol.
 
@@ -1178,7 +1197,9 @@ if HAVE_PROTOCOLS and not PEP_560:
                                        for b in cls.__bases__)
             if cls._is_protocol:
                 for base in cls.__mro__[1:]:
-                    if not (base in (object, Generic, Callable) or
+                    if not (base in (object, Generic) or
+                            base.__module__ == 'collections.abc' and
+                            base.__name__ in _PROTO_WHITELIST or
                             isinstance(base, TypingMeta) and base._is_protocol or
                             isinstance(base, GenericMeta) and
                             base.__origin__ is Generic):
@@ -1203,8 +1224,10 @@ if HAVE_PROTOCOLS and not PEP_560:
                                 return NotImplemented
                             break
                         annotations = getattr(base, '__annotations__', {})
-                        if (isinstance(annotations, typing.Mapping) and attr in annotations and
-                                isinstance(other, _ProtocolMeta) and other._is_protocol):
+                        if (isinstance(annotations, typing.Mapping) and
+                                attr in annotations and
+                                isinstance(other, _ProtocolMeta) and
+                                other._is_protocol):
                             break
                     else:
                         return NotImplemented
@@ -1235,13 +1258,17 @@ if HAVE_PROTOCOLS and not PEP_560:
                 return False
             if (self.__dict__.get('_is_protocol', None) and
                     not self.__dict__.get('_is_runtime_protocol', None)):
-                if sys._getframe(1).f_globals['__name__'] in ['abc', 'functools', 'typing']:
+                if sys._getframe(1).f_globals['__name__'] in ['abc',
+                                                              'functools',
+                                                              'typing']:
                     return False
                 raise TypeError("Instance and class checks can only be used with"
                                 " @runtime protocols")
             if (self.__dict__.get('_is_runtime_protocol', None) and
                     not _is_callable_members_only(self)):
-                if sys._getframe(1).f_globals['__name__'] in ['abc', 'functools', 'typing']:
+                if sys._getframe(1).f_globals['__name__'] in ['abc',
+                                                              'functools',
+                                                              'typing']:
                     return super(GenericMeta, self).__subclasscheck__(cls)
                 raise TypeError("Protocols with non-method members"
                                 " don't support issubclass()")
@@ -1334,7 +1361,7 @@ if HAVE_PROTOCOLS and not PEP_560:
 
 
 elif PEP_560:
-    from typing import _type_check, _GenericAlias, _collect_type_vars
+    from typing import _type_check, _GenericAlias, _collect_type_vars  # noqa
 
     class _ProtocolMeta(abc.ABCMeta):
         # This metaclass is a bit unfortunate and exists only because of the lack
@@ -1354,11 +1381,10 @@ elif PEP_560:
                     return True
             return super().__instancecheck__(instance)
 
-
     class Protocol(metaclass=_ProtocolMeta):
         # There is quite a lot of overlapping code with typing.Generic.
-        # Unfortunately it is hard to avoid this while these live in two different modules.
-        # The duplicated code will be removed when Protocol is moved to typing.
+        # Unfortunately it is hard to avoid this while these live in two different
+        # modules. The duplicated code will be removed when Protocol is moved to typing.
         """Base class for protocol classes. Protocol classes are defined as::
 
             class Proto(Protocol):
@@ -1457,7 +1483,8 @@ elif PEP_560:
                         s_vars = ', '.join(str(t) for t in tvars if t not in gvarset)
                         s_args = ', '.join(str(g) for g in gvars)
                         raise TypeError("Some type variables ({}) are"
-                                        " not listed in {}[{}]".format(s_vars, the_base, s_args))
+                                        " not listed in {}[{}]".format(s_vars,
+                                                                       the_base, s_args))
                     tvars = gvars
             cls.__parameters__ = tuple(tvars)
 
@@ -1489,8 +1516,10 @@ elif PEP_560:
                                 return NotImplemented
                             break
                         annotations = getattr(base, '__annotations__', {})
-                        if (isinstance(annotations, typing.Mapping) and attr in annotations and
-                                isinstance(other, _ProtocolMeta) and other._is_protocol):
+                        if (isinstance(annotations, typing.Mapping) and
+                                attr in annotations and
+                                isinstance(other, _ProtocolMeta) and
+                                other._is_protocol):
                             break
                     else:
                         return NotImplemented
@@ -1504,7 +1533,9 @@ elif PEP_560:
 
             # Check consistency of bases.
             for base in cls.__bases__:
-                if not (base in (object, Generic, Callable) or
+                if not (base in (object, Generic) or
+                        base.__module__ == 'collections.abc' and
+                        base.__name__ in _PROTO_WHITELIST or
                         isinstance(base, _ProtocolMeta) and base._is_protocol):
                     raise TypeError('Protocols can only inherit from other'
                                     ' protocols, got %r' % base)
@@ -1515,8 +1546,10 @@ elif PEP_560:
             cls.__init__ = _no_init
 
 
-if HAVE_PROTOCOLS:
-    def runtime(cls):
+if hasattr(typing, 'runtime_checkable'):
+    runtime_checkable = typing.runtime_checkable
+elif HAVE_PROTOCOLS:
+    def runtime_checkable(cls):
         """Mark a protocol class as a runtime protocol, so that it
         can be used with isinstance() and issubclass(). Raise TypeError
         if applied to a non-protocol class.
@@ -1525,98 +1558,104 @@ if HAVE_PROTOCOLS:
         one-offs in collections.abc such as Hashable.
         """
         if not isinstance(cls, _ProtocolMeta) or not cls._is_protocol:
-            raise TypeError('@runtime can be only applied to protocol classes,'
+            raise TypeError('@runtime_checkable can be only applied to protocol classes,'
                             ' got %r' % cls)
         cls._is_runtime_protocol = True
         return cls
 
 
-def _check_fails(cls, other):
-    try:
-        if sys._getframe(1).f_globals['__name__'] not in ['abc', 'functools', 'typing']:
-            # Typed dicts are only for static structural subtyping.
-            raise TypeError('TypedDict does not support instance and class checks')
-    except (AttributeError, ValueError):
-        pass
-    return False
+if HAVE_PROTOCOLS:
+    # Exists for backwards compatibility.
+    runtime = runtime_checkable
 
 
-def _dict_new(cls, *args, **kwargs):
-    return dict(*args, **kwargs)
+if hasattr(typing, 'TypedDict'):
+    TypedDict = typing.TypedDict
+else:
+    def _check_fails(cls, other):
+        try:
+            if sys._getframe(1).f_globals['__name__'] not in ['abc',
+                                                              'functools',
+                                                              'typing']:
+                # Typed dicts are only for static structural subtyping.
+                raise TypeError('TypedDict does not support instance and class checks')
+        except (AttributeError, ValueError):
+            pass
+        return False
 
+    def _dict_new(cls, *args, **kwargs):
+        return dict(*args, **kwargs)
 
-def _typeddict_new(cls, _typename, _fields=None, **kwargs):
-    total = kwargs.pop('total', True)
-    if _fields is None:
-        _fields = kwargs
-    elif kwargs:
-        raise TypeError("TypedDict takes either a dict or keyword arguments,"
-                        " but not both")
+    def _typeddict_new(cls, _typename, _fields=None, **kwargs):
+        total = kwargs.pop('total', True)
+        if _fields is None:
+            _fields = kwargs
+        elif kwargs:
+            raise TypeError("TypedDict takes either a dict or keyword arguments,"
+                            " but not both")
 
-    ns = {'__annotations__': dict(_fields), '__total__': total}
-    try:
-        # Setting correct module is necessary to make typed dict classes pickleable.
-        ns['__module__'] = sys._getframe(1).f_globals.get('__name__', '__main__')
-    except (AttributeError, ValueError):
-        pass
+        ns = {'__annotations__': dict(_fields), '__total__': total}
+        try:
+            # Setting correct module is necessary to make typed dict classes pickleable.
+            ns['__module__'] = sys._getframe(1).f_globals.get('__name__', '__main__')
+        except (AttributeError, ValueError):
+            pass
 
-    return _TypedDictMeta(_typename, (), ns)
+        return _TypedDictMeta(_typename, (), ns)
 
+    class _TypedDictMeta(type):
+        def __new__(cls, name, bases, ns, total=True):
+            # Create new typed dict class object.
+            # This method is called directly when TypedDict is subclassed,
+            # or via _typeddict_new when TypedDict is instantiated. This way
+            # TypedDict supports all three syntaxes described in its docstring.
+            # Subclasses and instances of TypedDict return actual dictionaries
+            # via _dict_new.
+            ns['__new__'] = _typeddict_new if name == 'TypedDict' else _dict_new
+            tp_dict = super(_TypedDictMeta, cls).__new__(cls, name, (dict,), ns)
 
-class _TypedDictMeta(type):
-    def __new__(cls, name, bases, ns, total=True):
-        # Create new typed dict class object.
-        # This method is called directly when TypedDict is subclassed,
-        # or via _typeddict_new when TypedDict is instantiated. This way
-        # TypedDict supports all three syntaxes described in its docstring.
-        # Subclasses and instances of TypedDict return actual dictionaries
-        # via _dict_new.
-        ns['__new__'] = _typeddict_new if name == 'TypedDict' else _dict_new
-        tp_dict = super(_TypedDictMeta, cls).__new__(cls, name, (dict,), ns)
+            anns = ns.get('__annotations__', {})
+            msg = "TypedDict('Name', {f0: t0, f1: t1, ...}); each t must be a type"
+            anns = {n: typing._type_check(tp, msg) for n, tp in anns.items()}
+            for base in bases:
+                anns.update(base.__dict__.get('__annotations__', {}))
+            tp_dict.__annotations__ = anns
+            if not hasattr(tp_dict, '__total__'):
+                tp_dict.__total__ = total
+            return tp_dict
 
-        anns = ns.get('__annotations__', {})
-        msg = "TypedDict('Name', {f0: t0, f1: t1, ...}); each t must be a type"
-        anns = {n: typing._type_check(tp, msg) for n, tp in anns.items()}
-        for base in bases:
-            anns.update(base.__dict__.get('__annotations__', {}))
-        tp_dict.__annotations__ = anns
-        if not hasattr(tp_dict, '__total__'):
-            tp_dict.__total__ = total
-        return tp_dict
+        __instancecheck__ = __subclasscheck__ = _check_fails
 
-    __instancecheck__ = __subclasscheck__ = _check_fails
+    TypedDict = _TypedDictMeta('TypedDict', (dict,), {})
+    TypedDict.__module__ = __name__
+    TypedDict.__doc__ = \
+        """A simple typed name space. At runtime it is equivalent to a plain dict.
 
+        TypedDict creates a dictionary type that expects all of its
+        instances to have a certain set of keys, with each key
+        associated with a value of a consistent type. This expectation
+        is not checked at runtime but is only enforced by type checkers.
+        Usage::
 
-TypedDict = _TypedDictMeta('TypedDict', (dict,), {})
-TypedDict.__module__ = __name__
-TypedDict.__doc__ = \
-    """A simple typed name space. At runtime it is equivalent to a plain dict.
+            class Point2D(TypedDict):
+                x: int
+                y: int
+                label: str
 
-    TypedDict creates a dictionary type that expects all of its
-    instances to have a certain set of keys, with each key
-    associated with a value of a consistent type. This expectation
-    is not checked at runtime but is only enforced by type checkers.
-    Usage::
+            a: Point2D = {'x': 1, 'y': 2, 'label': 'good'}  # OK
+            b: Point2D = {'z': 3, 'label': 'bad'}           # Fails type check
 
-        class Point2D(TypedDict):
-            x: int
-            y: int
-            label: str
+            assert Point2D(x=1, y=2, label='first') == dict(x=1, y=2, label='first')
 
-        a: Point2D = {'x': 1, 'y': 2, 'label': 'good'}  # OK
-        b: Point2D = {'z': 3, 'label': 'bad'}           # Fails type check
+        The type info could be accessed via Point2D.__annotations__. TypedDict
+        supports two additional equivalent forms::
 
-        assert Point2D(x=1, y=2, label='first') == dict(x=1, y=2, label='first')
+            Point2D = TypedDict('Point2D', x=int, y=int, label=str)
+            Point2D = TypedDict('Point2D', {'x': int, 'y': int, 'label': str})
 
-    The type info could be accessed via Point2D.__annotations__. TypedDict
-    supports two additional equivalent forms::
-
-        Point2D = TypedDict('Point2D', x=int, y=int, label=str)
-        Point2D = TypedDict('Point2D', {'x': int, 'y': int, 'label': str})
-
-    The class syntax is only supported in Python 3.6+, while two other
-    syntax forms work for Python 2.7 and 3.2+
-    """
+        The class syntax is only supported in Python 3.6+, while two other
+        syntax forms work for Python 2.7 and 3.2+
+        """
 
 
 if PEP_560:
@@ -1678,7 +1717,7 @@ if PEP_560:
         - It's an error to call `Annotated` with less than two arguments.
         - Nested Annotated are flattened::
 
-            Annotated[Annotated[int, Ann1, Ann2], Ann3] == Annotated[int, Ann1, Ann2, Ann3]
+            Annotated[Annotated[T, Ann1, Ann2], Ann3] == Annotated[T, Ann1, Ann2, Ann3]
 
         - Instantiating an annotated type is equivalent to instantiating the
         underlying type::
@@ -1796,7 +1835,7 @@ elif HAVE_ANNOTATED:
             metadata_reprs = ", ".join(repr(arg) for arg in metadata)
             return '%s[%s, %s]' % (cls, tp_repr, metadata_reprs)
 
-        def _subs_tree(self, tvars=None, args=None):
+        def _subs_tree(self, tvars=None, args=None):  # noqa
             if self is Annotated:
                 return Annotated
             res = super()._subs_tree(tvars=tvars, args=args)
@@ -1873,7 +1912,6 @@ elif HAVE_ANNOTATED:
         def __subclasscheck__(self, cls):
             raise TypeError("Annotated cannot be used with issubclass().")
 
-
     class Annotated(metaclass=AnnotatedMeta):
         """Add context specific metadata to a type.
 
@@ -1890,7 +1928,7 @@ elif HAVE_ANNOTATED:
         - It's an error to call `Annotated` with less than two arguments.
         - Nested Annotated are flattened::
 
-            Annotated[Annotated[int, Ann1, Ann2], Ann3] == Annotated[int, Ann1, Ann2, Ann3]
+            Annotated[Annotated[T, Ann1, Ann2], Ann3] == Annotated[T, Ann1, Ann2, Ann3]
 
         - Instantiating an annotated type is equivalent to instantiating the
         underlying type::
