@@ -202,7 +202,7 @@ MISSING = _MISSING_TYPE()
 class SchemaAnnotation:
     """ Annotation holding SchemaElement information to go as 2nd parameter into typing_extensions.Annotated """
 
-    def __init__(self,required : bool=False ,default : typing.Any=MISSING,validate: typing.Optional[typing.Callable] =None, metadata: typing.Mapping[str, typing.Any]):
+    def __init__(self,required : bool=False ,default : typing.Any=MISSING,validate: typing.Optional[typing.Callable] =None, metadata: typing.Mapping[str, typing.Any] = {}):
         """ SchemaAnnotation 
             default is the internal form of the default value, or MISSING
             validate is a callable with signature of .validate().
@@ -215,9 +215,9 @@ class SchemaAnnotation:
         
 
     @staticmethod
-    def validate(schemaElement : AbstractSchemaElement, external: typing.Any, source: WellknownRepresentation, **params) -> typing.Any:
+    def validate(annotation: SchemaAnnotation, schemaElement : AbstractSchemaElement, external: typing.Any, source: WellknownRepresentation, **params) -> typing.Any:
         """ Validation method, to transform external and validate it. Returns internal form, or raises error.
-            The arguments are the same as in AbstracrSchema.from_external(). Params must be passed down. 
+            The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
 
             Default implementation:
             
@@ -225,8 +225,8 @@ class SchemaAnnotation:
         """
         if not element:
             if default is not MISSING:
-                internal = self.default
-            elif self.required:
+                internal = annotation.default
+            elif annotation.required:
                 raise ValueError('required element must be supplied')
         else:
             pt = schemaElement.get_python_type()
