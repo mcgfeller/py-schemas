@@ -132,6 +132,10 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
 
 
 class AbstractSchemaElement(metaclass=abc.ABCMeta):
+    """ Holds one SchemaElement of a Schema. No represenation is prescribed, hence there is no constructor.
+        The SchemaTypeAnnotation, however, prescribes a representation. It can either be attached to the 
+        SchemaElement, or generated from it when queried by .get_annotation(). 
+    """
     @abc.abstractmethod
     def get_schema(self) -> typing.Optional[AbstractSchema]:
         """ get associated schema or None """
@@ -148,16 +152,16 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_annotation(self) -> 'SchemaAnnotation':
-        """ get SchemaAnnotation of this AbstractSchemaElement """
-        pass
+    def get_annotation(self) -> typing.Optional['SchemaTypeAnnotation']:
+        """ Optional: get SchemaTypeAnnotation of this AbstractSchemaElement """
+        return
 
 
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
 
-            Meta data is not used at all by the Schema, and is provided as a third-party 
+            Metadata is not used at all by the Schema, and is provided as a third-party 
             extension mechanism. Multiple third-parties can each have their own key, 
             to use as a namespace in the metadata.
             (similar to and taken from dataclasses.Field)
@@ -180,6 +184,16 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
     def get_annotated(self) -> type:
         """ get PEP-593 typing.Annotated type """
         return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
+
+    @staticmethod
+    def split_annotated(annotated : type) -> typing.Tuple[type,typing.Optional['SchemaTypeAnnotation']]:
+        """ from a typing.Annotated, return tuple of (type,annotation)
+            Note that there may be multiple Annotations, we take the first one that is a SchemaTypeAnnotation.
+        """ 
+        pt = annotated.__args__[0]
+        # 1st SchemaTypeAnnotation, or None
+        ann = next((a for a in annotated.__metadata__ if isinstance(a,SchemaTypeAnnotation)),None) 
+        return pt,ann
     
 
     def get_python_field(self) -> dataclasses.Field:
@@ -199,11 +213,13 @@ class _MISSING_TYPE:
 MISSING = _MISSING_TYPE()
 
 
-class SchemaAnnotation:
-    """ Annotation holding SchemaElement information to go as 2nd parameter into typing_extensions.Annotated """
+class SchemaTypeAnnotation:
+    """ Annotation holding SchemaElement typing information to go as 2nd parameter into typing_extensions.Annotated.
+        Unlike the AbstractSchemaElement, the SchemaTypeAnnotation is concrete and prescribes a minimal representation.
+    """
 
     def __init__(self,required : bool=False ,default : typing.Any=MISSING,validate: typing.Optional[typing.Callable] =None, metadata: typing.Mapping[str, typing.Any] = {}):
-        """ SchemaAnnotation 
+        """ SchemaTypeAnnotation 
             default is the internal form of the default value, or MISSING
             validate is a callable with signature of .validate().
         """
@@ -212,10 +228,13 @@ class SchemaAnnotation:
         if validate is not None:
             self.validate = validate
         self.metadata = metadata
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}(required={self.required}, default={"MISSING" if self.default is MISSING else self.default})'
         
 
-    @staticmethod
-    def validate(annotation: SchemaAnnotation, schemaElement : AbstractSchemaElement, external: typing.Any, source: WellknownRepresentation, **params) -> typing.Any:
+    @staticmethod # WHY? 
+    def validate(annotation: 'SchemaTypeAnnotation', schemaElement : AbstractSchemaElement, external: typing.Any, source: WellknownRepresentation, **params) -> typing.Any:
         """ Validation method, to transform external and validate it. Returns internal form, or raises error.
             The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
 

@@ -20,7 +20,8 @@ The goal is to define an informational PEP on Schema interoperability similar to
 Python typing only allows declaration of uniform value types for dictionaries (i.e., each value must be of the same type). Hence the most natural data typed with a schema is the object, with the schema attached to its class. The individual schema elements correspond to instance variables. 
 
 * Declaring a schema on a class should declare the type of its instance variables.  
-* Schema types should be subtypes of the Python types. 
+* Schema types should be subtypes of the Python types.
+* Schema types use Type Annotations [PEP 593](https://www.python.org/dev/peps/pep-0593) to carry a minimal (and extensible) semantic representation of schema information.  
 
 
 ## Interoperability between Schema solutions
@@ -36,12 +37,13 @@ The minimal standard is defined as a Protocol, with some Abstract Base Classes. 
 * Static type checking
   * Get the Python type of a schema element 
 * Minimal Schema transformation:
-  * Get [dataclasses.Field](https://docs.python.org/3/library/dataclasses.html#dataclasses.Field) of a schema element
-  * Construct a a Schema element from dataclasses.Field
-  * Construct a Schema from another Schema (from another Schema solution) by going through dataclasses.Field for each element. 
+  * Get an annotated Python type of a schema element
+  * Construct a a Schema element from an annotated Python
+  * Construct a Schema from another Schema (from another Schema solution) by going through annotated Python types for each element. 
 * Associate data with Schema
 
-The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. It does provide minimal conversion of arbitrary Schema features between schema libraries, as it provides conversion to Python static types and dataclasses.Fields. See [Alternatives considered](alternatives.md).
+The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. However, it
+does provide standard Type Annotations for interoperability andminimal conversion of Schema features between schema libraries See [Alternatives considered](alternatives.md).
 
 
 
