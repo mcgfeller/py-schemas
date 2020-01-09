@@ -1,46 +1,26 @@
-""" Protocol for Schema """
-
-import abc
-import typing
-import typing_extensions
-import collections.abc
-import enum
+""" ABC Dataclasses Schema examples """
+import abc_schema
 import dataclasses
+import datetime
+import typing
 
 
-class SchemedObject(metaclass=abc.ABCMeta):
-    """ An object with a Schema, supporting the __get_schema__ method.
-    """
+
+
+
+
+class DCSchema(abc_schema.AbstractSchema):
+
+    def __init__(self,dataclass):
+        self.dataclass = dataclass
+        
 
     @classmethod
-    @abc.abstractmethod
-    def __get_schema__(cls) -> "AbstractSchema":
-        pass
+    def schema(cls,dataclass) -> 'DCSchema':
+        """ create DCSchema from dataclass """
+        return cls(dataclass)
 
 
-class WellknownRepresentation(enum.Enum):
-
-    # fmt: off
-    python  = "__python__"  # internal python structures
-    pickle  = "application/python-pickle"
-    json    = "application/json"
-    xml     = "application/xml"
-    sql     = "application/sql"
-    html    = "text/html"
-    # fmt: on
-
-
-class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
-    """ The AbstractSchema does not prescribe how the Schema is organized, and
-        only prescribes that the AbstractSchemaElement may be obtained by iterating
-        over the Schema.
-    """
-
-    SupportedRepresentations: typing.ClassVar[typing.Set["WellknownRepresentation"]] = {
-        WellknownRepresentation.python
-    }
-
-    @abc.abstractmethod
     def to_external(
         self,
         obj: SchemedObject,
@@ -59,7 +39,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         pass
 
-    @abc.abstractmethod
+
     def from_external(
         self,
         external: typing.Union[typing.Any, typing.Callable],
@@ -76,14 +56,18 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         pass
 
-    @abc.abstractmethod
+
     def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
         pass
 
-    @abc.abstractmethod
+
     def __iter__(self) -> typing.Iterator["AbstractSchemaElement"]:
         """ iterator through SchemaElements in this Schema """
-        pass
+
+        for name,field in self.dataclass.__dataclass_fields__.items():
+            ann = abc_schema.SchemaTypeAnnotation(required=True,default=None) # XXX
+            yield DCSchemaElement(self,name,field.type,ann,field.metadata)
+            
 
     def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
         """ return Schema Elements in annotation format.
@@ -95,11 +79,6 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
 
-    def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
-        """ return Schema Elements in DataClass field annotation format.
-            Use as class.__annotations__ = schema.as_field_annotations().
-        """
-        return {se.get_name(): se.get_python_field() for se in self}
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
@@ -117,44 +96,51 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         return {}
 
     @classmethod
-    @abc.abstractmethod
     def from_schema(cls, schema: "AbstractSchema") -> "AbstractSchema":
         """ Optional API: create a new Schema (in the Schema dialect of the cls) from
             a schema in any Schema Dialect.
         """
         pass
 
-    @abc.abstractmethod
+
     def add_element(self, element: "AbstractSchemaElement"):
         """ Optional API: Add a Schema element (in any Schema Dialect) to this Schema. 
         """
         pass
 
 
-class AbstractSchemaElement(metaclass=abc.ABCMeta):
+
+            
+            
+class DCSchemaElement(AbstractSchemaElement):
     """ Holds one SchemaElement of a Schema. No represenation is prescribed, hence there is no constructor.
         The SchemaTypeAnnotation, however, prescribes a representation. It can either be attached to the 
         SchemaElement, or generated from it when queried by .get_annotation(). 
     """
-    @abc.abstractmethod
-    def get_schema(self) -> typing.Optional[AbstractSchema]:
-        """ get associated schema or None """
-        pass
 
-    @abc.abstractmethod
+    def __init__(self,schema,name,type,ann,meta):
+        self.schema = schema
+        self.name = name
+        self.type = type
+        self.ann = ann
+        self.meta = meta
+
+    def get_schema(self) -> DCSchema:
+        """ get associated schema or None """
+        return self.schema
+
     def get_name(self) -> str:
         """ get name useable as variable name """
-        pass
+        return self.name
 
-    @abc.abstractmethod
     def get_python_type(self) -> type:
         """ get Python type of this AbstractSchemaElement """
-        pass
+        return self.type
 
-    @abc.abstractmethod
+
     def get_annotation(self) -> typing.Optional['SchemaTypeAnnotation']:
         """ Optional: get SchemaTypeAnnotation of this AbstractSchemaElement """
-        return
+        return self.ann
 
 
 
@@ -168,10 +154,9 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
 
             Can be refined; by default an empty dict is returned.
         """
-        return {}
+        return self.meta
 
     @classmethod
-    @abc.abstractmethod
     def from_schema_element(
         cls, schema_element: "AbstractSchemaElement"
     ) -> "AbstractSchemaElement":
@@ -206,80 +191,15 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         dcfield.type = self.get_python_type()
         return dcfield
 
-class _MISSING_TYPE:
-    """ A sentinel object to detect if a parameter is supplied or not.  Use a class to give it a better repr. """
-    def __repr__(self):
-        return 'MISSING'
-MISSING = _MISSING_TYPE()
 
+@dataclasses.dataclass
+class InventoryItem:
+    """ Class for keeping track of an item in inventory. """
+    name: str
+    unit_price: float
+    quantity_on_hand: int = 0
 
-class SchemaTypeAnnotation:
-    """ Annotation holding SchemaElement typing information to go as 2nd parameter into typing_extensions.Annotated.
-        Unlike the AbstractSchemaElement, the SchemaTypeAnnotation is concrete and prescribes a minimal representation.
-        
-    """
+    def total_cost(self) -> float:
+        return self.unit_price * self.quantity_on_hand
 
-    def __init__(self,required : bool=False ,default : typing.Any=MISSING,
-        to_external: typing.Optional[typing.Callable] =None, 
-        from_external: typing.Optional[typing.Callable] =None, 
-        validate_internal: typing.Optional[typing.Callable] =None,                 
-        metadata: typing.Mapping[str, typing.Any] = {}):
-        """ SchemaTypeAnnotation 
-            default is the internal form of the default value, or MISSING
-            from_external, to_external and validate_internal are callables with signature of the methods below, which they overwrite.
-        """
-        self.required = required
-        self.default = default
-        if to_external is not None: 
-            self.to_external = to_external
-        if from_external is not None:
-            self.from_external = from_external
-        if validate_internal is not None:
-            self.validate_internal = validate_internal
-        self.metadata = metadata
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}(required={self.required}, default={self.default})'
-
-
-    @staticmethod # can be overritten by passing a function to the constructor
-    def to_external(annotation: 'SchemaTypeAnnotation', schemaElement : AbstractSchemaElement, value: typing.Any, writer_callback: typing.Optional[typing.Callable] = None,
-        **params) -> typing.Optional[typing.Any]:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
-            The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
-
-            Default implementation:
-            
-            Passes external to schemaElement.get_python_type() by default.
-        """
-
-    @staticmethod # can be overritten by passing a function to the constructor
-    def from_external(annotation: 'SchemaTypeAnnotation', schemaElement : AbstractSchemaElement, external: typing.Union[typing.Any, typing.Callable], source: WellknownRepresentation, **params) -> typing.Any:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
-            The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
-
-            Default implementation:
-            
-            Passes external to schemaElement.get_python_type() by default.
-        """
-        
-
-    @staticmethod # can be overritten by passing a function to the constructor
-    def validate_internal(annotation: 'SchemaTypeAnnotation', schemaElement : AbstractSchemaElement, value: typing.Any, **params) -> typing.Any:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
-            The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
-
-            Default implementation:
-            
-            Passes external to schemaElement.get_python_type() by default.
-        """
-        if not value:
-            if annotation.default is not MISSING:
-                value = annotation.default
-            elif annotation.required:
-                raise ValueError('required element must be supplied')
-        else:
-            pt = schemaElement.get_python_type()
-            value = pt(value)
-        return value
-
+s = DCSchema.schema(InventoryItem)
