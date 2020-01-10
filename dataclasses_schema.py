@@ -62,7 +62,7 @@ class DCSchema(abc_schema.AbstractSchema):
         pass
 
 
-    def __iter__(self) -> typing.Iterator["AbstractSchemaElement"]:
+    def __iter__(self) -> typing.Iterator['DCSchemaElement']:
         """ iterator through SchemaElements in this Schema """
 
         for name,field in self.dataclass.__dataclass_fields__.items():
@@ -97,14 +97,14 @@ class DCSchema(abc_schema.AbstractSchema):
         return {}
 
     @classmethod
-    def from_schema(cls, schema: "AbstractSchema") -> "AbstractSchema":
-        """ Optional API: create a new Schema (in the Schema dialect of the cls) from
+    def from_schema(cls, schema: abc_schema.AbstractSchema) -> "DCSchema":
+        """ Optional API: create a new DCSchema from
             a schema in any Schema Dialect.
         """
         pass
 
 
-    def add_element(self, element: "AbstractSchemaElement"):
+    def add_element(self, element: "DCSchemaElement"):
         """ Optional API: Add a Schema element (in any Schema Dialect) to this Schema. 
         """
         pass
@@ -139,7 +139,7 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
         return self.type
 
 
-    def get_annotation(self) -> typing.Optional['SchemaTypeAnnotation']:
+    def get_annotation(self) -> typing.Optional[abc_schema.SchemaTypeAnnotation]:
         """ Optional: get SchemaTypeAnnotation of this AbstractSchemaElement """
         return self.ann
 
@@ -160,37 +160,22 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
     @classmethod
     def from_schema_element(
         cls, schema_element: abc_schema.AbstractSchemaElement
-    ) -> abc_schema.AbstractSchemaElement:
-        """ Optional API: create a new AbstractSchemaElement (in the Schema dialect of the cls) from
+    ) -> 'DCSchemaElement':
+        """ create a new DCSchemaElement from
             a AbstractSchemaElement in any Schema Dialect.
         """
-        pass
+        ann = schema_element.get_annotated()
+        default = dataclasses.MISSING if ann.default is abc_schema.MISSING else ann.default # switch our MISSING to dataclasses.MISSING
+        dcfield = dataclasses.field(default=default,metadata=self.get_metadata())
+        dcfield.type = self.get_python_type()
+        return dcfield
 
 
     def get_annotated(self) -> type:
         """ get PEP-593 typing.Annotated type """
-        return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
+        return typing_extensions.Annotated[self.type,self.ann]
 
-    @staticmethod
-    def split_annotated(annotated : type) -> typing.Tuple[type,typing.Optional['SchemaTypeAnnotation']]:
-        """ from a typing.Annotated, return tuple of (type,annotation)
-            Note that there may be multiple Annotations, we take the first one that is a SchemaTypeAnnotation.
-        """ 
-        pt = annotated.__args__[0]
-        # 1st SchemaTypeAnnotation, or None:
-        ann = next((a for a in annotated.__metadata__ if isinstance(a,abc_schema.AbstractSchemaElement.SchemaTypeAnnotation)),None) 
-        return pt,ann
-    
-
-    def get_python_field(self) -> dataclasses.Field:
-        """ get Python dataclasses.Field corresponding to AbstractSchemaElement.
-            Unless refined, just packs type and default into a Field and attaches metadata. 
-        """
-        ann = self.get_annotated()
-        default = dataclasses.MISSING if ann.default is MISSING else ann.default # switch our MISSING to dataclasses.MISSING
-        dcfield = dataclasses.field(default=default,metadata=self.get_metadata())
-        dcfield.type = self.get_python_type()
-        return dcfield
+   
 
 
 @dataclasses.dataclass
