@@ -3,6 +3,7 @@ import abc_schema
 import dataclasses
 import datetime
 import typing
+import typing_extensions
 
 
 
@@ -16,15 +17,15 @@ class DCSchema(abc_schema.AbstractSchema):
         
 
     @classmethod
-    def schema(cls,dataclass) -> 'DCSchema':
+    def get_schema(cls,dataclass) -> 'DCSchema':
         """ create DCSchema from dataclass """
         return cls(dataclass)
 
 
     def to_external(
         self,
-        obj: SchemedObject,
-        destination: WellknownRepresentation,
+        obj: abc_schema.SchemedObject,
+        destination: abc_schema.WellknownRepresentation,
         writer_callback: typing.Optional[typing.Callable] = None,
         **params,
     ) -> typing.Optional[typing.Any]:
@@ -43,9 +44,9 @@ class DCSchema(abc_schema.AbstractSchema):
     def from_external(
         self,
         external: typing.Union[typing.Any, typing.Callable],
-        source: WellknownRepresentation,
+        source: abc_schema.WellknownRepresentation,
         **params,
-    ) -> SchemedObject:
+    ) -> abc_schema.SchemedObject:
 
         """
             If *external* is bytes, they are consumed as source representation.
@@ -57,7 +58,7 @@ class DCSchema(abc_schema.AbstractSchema):
         pass
 
 
-    def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
+    def validate_internal(self, obj: abc_schema.SchemedObject, **params) -> abc_schema.SchemedObject:
         pass
 
 
@@ -112,7 +113,7 @@ class DCSchema(abc_schema.AbstractSchema):
 
             
             
-class DCSchemaElement(AbstractSchemaElement):
+class DCSchemaElement(abc_schema.AbstractSchemaElement):
     """ Holds one SchemaElement of a Schema. No represenation is prescribed, hence there is no constructor.
         The SchemaTypeAnnotation, however, prescribes a representation. It can either be attached to the 
         SchemaElement, or generated from it when queried by .get_annotation(). 
@@ -158,8 +159,8 @@ class DCSchemaElement(AbstractSchemaElement):
 
     @classmethod
     def from_schema_element(
-        cls, schema_element: "AbstractSchemaElement"
-    ) -> "AbstractSchemaElement":
+        cls, schema_element: abc_schema.AbstractSchemaElement
+    ) -> abc_schema.AbstractSchemaElement:
         """ Optional API: create a new AbstractSchemaElement (in the Schema dialect of the cls) from
             a AbstractSchemaElement in any Schema Dialect.
         """
@@ -177,7 +178,7 @@ class DCSchemaElement(AbstractSchemaElement):
         """ 
         pt = annotated.__args__[0]
         # 1st SchemaTypeAnnotation, or None:
-        ann = next((a for a in annotated.__metadata__ if isinstance(a,SchemaTypeAnnotation)),None) 
+        ann = next((a for a in annotated.__metadata__ if isinstance(a,abc_schema.AbstractSchemaElement.SchemaTypeAnnotation)),None) 
         return pt,ann
     
 
@@ -202,4 +203,5 @@ class InventoryItem:
     def total_cost(self) -> float:
         return self.unit_price * self.quantity_on_hand
 
-s = DCSchema.schema(InventoryItem)
+s = DCSchema.get_schema(InventoryItem)
+s.as_annotations(include_extras=True)
