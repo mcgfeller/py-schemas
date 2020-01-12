@@ -3,13 +3,176 @@
     Marshmallow schema is subclassed. 
 """
 
-import typing
 import marshmallow as mm  # type: ignore
 import decimal
 import datetime
 import abc_schema
 import dataclasses
+import typing
+import typing_extensions
 
+
+
+
+class SchemedObject:
+    """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
+        Schema. It defines one class method .__get_schema__, to return that Schema.
+
+        By convention of this implementation, the Schema is obtained as an inner class named Schema.
+        The Schema is instantiated and cached as .__schema. __objclass__ is set in the Schema so
+        that .object_factory() can create an instance. 
+    """
+
+    @classmethod
+    def __get_schema__(cls):
+        """ get schema attached to class, and cached in cls.__schema. If not cached, instantiate .Schema """
+        s = getattr(cls, "__schema", None)
+        if s is None:
+            sclass = getattr(cls, "Schema", None)
+            if sclass is None:
+                raise ValueError("Class must have Schema inner class")
+            else:
+                s = cls.__schema = sclass()  # instantiate
+                s.__objclass__ = cls  # assign this class to schema.__objclass__
+        return s
+
+
+abc_schema.SchemedObject.register(SchemedObject)
+
+
+class MMSchema(mm.Schema):
+
+    SupportedRepresentations = {
+        abc_schema.WellknownRepresentation.python,
+        abc_schema.WellknownRepresentation.json,
+    }
+
+    SupportsCallables:bool = True # callable input / output is supported
+
+    def get_name(self) -> str:
+        """ get name of Schema """
+        return None
+
+    def to_external(
+        self,
+        obj: SchemedObject,
+        destination: abc_schema.WellknownRepresentation,
+        writer_callback: typing.Optional[typing.Callable] = None,
+        **params,
+    ) -> typing.Optional[typing.Any]:
+        """
+            If *writer_callback* is None (the default), the external representation
+            is returned as result.
+
+            If *writer_callback* is not None, then it can be called any number
+            of times with some arguments. No result is returned.
+
+            (inspired by PEP-574 https://www.python.org/dev/peps/pep-0574/#producer-api)
+        """
+        supported = {
+            abc_schema.WellknownRepresentation.json: self.dumps,
+            abc_schema.WellknownRepresentation.python: self.dump,
+        }
+        
+        self.check_supported_output(destination,writer_callback)
+        method = supported[destination]
+        e = method(obj, **params)
+        if writer_callback:
+            return writer_callback(e)
+        else:
+            return e
+
+    def from_external(
+        self,
+        external: typing.Union[typing.Any, typing.Callable],
+        source: abc_schema.WellknownRepresentation,
+        **params,
+    ) -> typing.Union[SchemedObject, typing.Dict[typing.Any, typing.Any]]:
+
+        """
+            If *external* is bytes, they are consumed as source representation.
+
+            If *external* is a Callable, then it can be called any number
+            of times with some arguments to obtain parts of the source representation.
+
+        """
+        supported = {
+            abc_schema.WellknownRepresentation.json: self.loads,
+            abc_schema.WellknownRepresentation.python: self.load,
+        }
+        self.check_supported_input(source,external)
+        method = supported[destination]
+        if callable(external):
+            external = external(None)
+        d = method(external, **params)
+        o = self.object_factory(d)
+
+        return o
+
+    def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
+        """ Marshmallow doesn't provide validation on the object - we need to dump it.
+            As Schema.validate returns a dict, but we want an error raised, we call .load() instead.
+            However, if the validation doesn't raise an error, we return the argument obj unchanged. 
+        """
+        dummy = self.load(self.dump(obj))  # may raise an error
+        return obj
+
+    def __iter__(self)  -> mm.fields.FieldABC:
+        """ iterator through SchemaElements in this Schema, sett """
+        for name, field in self._declared_fields.items():
+            field.name = name
+            yield field
+
+    def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
+        """ return an object from dict, according to the Schema's __objclass__ """
+        objclass = getattr(self, "__objclass__", None)
+        if objclass:
+            o = objclass(**d)  # factory!
+        else:
+            o = d
+        return o
+
+
+
+    def as_annotations(self) -> typing.Dict[str, typing.Type]:
+        """ return Schema Elements in annotation format.
+            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
+        """
+        return {se.get_name(): se.get_python_type() for se in self}
+
+    def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
+        """ return metadata (aka payload data) for this Schema.
+            Meta data is not used at all by the Schema, and is provided as a third-party 
+            extension mechanism. Multiple third-parties can each have their own key, 
+            to use as a namespace in the metadata (similar to and taken from dataclasses.Field)
+        """
+        return self.context
+
+    @classmethod
+    def from_schema(cls, schema: abc_schema.AbstractSchema) -> "MMSchema":
+        """ Create a new Marshmallow Schema from a schema in any Schema Dialect.
+            Unfortunately, Marshmallow has no API to add fields, so we use internal APIs. 
+            See https://github.com/marshmallow-code/marshmallow/issues/1201.
+        """
+        s = MMSchema(context=schema.get_metadata())  # base Schema
+        # add fields
+        s.declared_fields = {
+            element.get_name(): mm.fields.Field.from_schema_element(element)
+            for element in schema
+        }
+        s.fields = s._init_fields()  # invoke internal API to bind fields 
+        return s
+
+    def add_element(self, element: abc_schema.AbstractSchemaElement):
+        """ Add a Schema element to this Schema.
+            We're afraid to use internal API to add additional fields.
+            See https://github.com/marshmallow-code/marshmallow/issues/1201.
+            This API is optional, after all.
+        """
+        raise NotImplementedError("Marshmallow API doesn't support adding fields")
+
+
+abc_schema.AbstractSchema.register(MMSchema)
 
 """ Methods for Marshmallow fields (will be monkey-patched) """
 
@@ -29,9 +192,15 @@ def get_python_type(self) -> typing.Type:
     """
     return FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
 
+def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
+    """ get SchemaTypeAnnotation  """ 
+    # TODO   
+    return abc_schema.SchemaTypeAnnotation(required=default is abc_schema.MISSING,default=default,metadata=self.field.metadata)
+
 
 def get_python_field(self) -> dataclasses.Field:
-    """ get Python dataclasses.Field corresponding to SchemaElement.
+    """ REMOVE
+        get Python dataclasses.Field corresponding to SchemaElement.
         Fills default if provided in field. If field is not required and there is no default, make type Optional.
     """
     pytype = self.get_python_type()
@@ -130,7 +299,6 @@ FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
     mm.fields.Decimal:          decimal.Decimal,
     mm.fields.Boolean:          bool,
     mm.fields.Email:            str,    
-    mm.fields.FormattedString:  str,
     mm.fields.Str:              str, # least specific last
     mm.fields.DateTime:         datetime.datetime,
     mm.fields.Time:             datetime.time,
@@ -156,13 +324,13 @@ def _dict_get_python_type(self) -> type:
         Simplified - either container is a Field, or we use Any.
     """
     kt = (
-        self.key_container.get_python_type()
-        if isinstance(self.key_container, mm.fields.FieldABC)
+        self.key_field.get_python_type()
+        if isinstance(self.key_field, mm.fields.FieldABC)
         else typing.Type[typing.Any]
     )
     vt = (
-        self.value_container.get_python_type()
-        if isinstance(self.value_container, mm.fields.FieldABC)
+        self.value_field.get_python_type()
+        if isinstance(self.value_field, mm.fields.FieldABC)
         else typing.Type[typing.Any]
     )
     return typing.Dict[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
@@ -183,164 +351,3 @@ def _dict_type_factory(
 
 mm.fields.Dict.get_python_type = _dict_get_python_type
 mm.fields.Dict._type_factory = classmethod(_dict_type_factory)
-
-
-class SchemedObject:
-    """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
-        Schema. It defines one class method .__get_schema__, to return that Schema.
-
-        By convention of this implementation, the Schema is obtained as an inner class named Schema.
-        The Schema is instantiated and cached as .__schema. __objclass__ is set in the Schema so
-        that .object_factory() can create an instance. 
-    """
-
-    @classmethod
-    def __get_schema__(cls):
-        """ get schema attached to class, and cached in cls.__schema. If not cached, instantiate .Schema """
-        s = getattr(cls, "__schema", None)
-        if s is None:
-            sclass = getattr(cls, "Schema", None)
-            if sclass is None:
-                raise ValueError("Class must have Schema inner class")
-            else:
-                s = cls.__schema = sclass()  # instantiate
-                s.__objclass__ = cls  # assign this class to schema.__objclass__
-        return s
-
-
-abc_schema.SchemedObject.register(SchemedObject)
-
-
-class MMSchema(mm.Schema):
-
-    SupportedRepresentations = {
-        abc_schema.WellknownRepresentation.python,
-        abc_schema.WellknownRepresentation.json,
-    }
-
-    def to_external(
-        self,
-        obj: SchemedObject,
-        destination: abc_schema.WellknownRepresentation,
-        writer_callback: typing.Optional[typing.Callable] = None,
-        **params,
-    ) -> typing.Optional[typing.Any]:
-        """
-            If *writer_callback* is None (the default), the external representation
-            is returned as result.
-
-            If *writer_callback* is not None, then it can be called any number
-            of times with some arguments. No result is returned.
-
-            (inspired by PEP-574 https://www.python.org/dev/peps/pep-0574/#producer-api)
-        """
-        supported = {
-            abc_schema.WellknownRepresentation.json: self.dumps,
-            abc_schema.WellknownRepresentation.python: self.dump,
-        }
-        method = supported.get(destination)
-        if not method:
-            raise ValueError(f"destination {destination} not supported.")
-        e = method(obj, **params)
-        if writer_callback:
-            return writer_callback(e)
-        else:
-            return e
-
-    def from_external(
-        self,
-        external: typing.Union[typing.Any, typing.Callable],
-        source: abc_schema.WellknownRepresentation,
-        **params,
-    ) -> typing.Union[SchemedObject, typing.Dict[typing.Any, typing.Any]]:
-
-        """
-            If *external* is bytes, they are consumed as source representation.
-
-            If *external* is a Callable, then it can be called any number
-            of times with some arguments to obtain parts of the source representation.
-
-        """
-        supported = {
-            abc_schema.WellknownRepresentation.json: self.loads,
-            abc_schema.WellknownRepresentation.python: self.load,
-        }
-        method = supported.get(source)
-        if not method:
-            raise ValueError(f"source {source} not supported.")
-        if callable(external):
-            external = external(None)
-        d = method(external, **params)
-        o = self.object_factory(d)
-
-        return o
-
-    def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
-        """ Marshmallow doesn't provide validation on the object - we need to dump it.
-            As Schema.validate returns a dict, but we want an error raised, we call .load() instead.
-            However, if the validation doesn't raise an error, we return the argument obj unchanged. 
-        """
-        dummy = self.load(self.dump(obj))  # may raise an error
-        return obj
-
-    def __iter__(self):
-        """ iterator through SchemaElements in this Schema, sett """
-        for name, field in self._declared_fields.items():
-            field.name = name
-            yield field
-
-    def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
-        """ return an object from dict, according to the Schema's __objclass__ """
-        objclass = getattr(self, "__objclass__", None)
-        if objclass:
-            o = objclass(**d)  # factory!
-        else:
-            o = d
-        return o
-
-    def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
-        """ return metadata (aka payload data) for this Schema.
-            Meta data is not used at all by the Schema, and is provided as a third-party 
-            extension mechanism. Multiple third-parties can each have their own key, 
-            to use as a namespace in the metadata (similar to and taken from dataclasses.Field)
-        """
-        return self.context
-
-    def as_annotations(self) -> typing.Dict[str, typing.Type]:
-        """ return Schema Elements in annotation format.
-            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
-        """
-        return {se.get_name(): se.get_python_type() for se in self}
-
-    def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
-        """ return Schema Elements in DataClass field annotation format. 
-            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
-        """
-        return {se.get_name(): se.get_python_field() for se in self}
-
-    @classmethod
-    def from_schema(cls, schema: abc_schema.AbstractSchema) -> "MMSchema":
-        """ Create a new Marshmallow Schema from a schema in any Schema Dialect.
-            Unfortunately, Marshmallow has no API to add fields, so we use internal APIs. 
-            See https://github.com/marshmallow-code/marshmallow/issues/1201.
-        """
-        s = MMSchema(context=schema.get_metadata())  # base Schema
-        # add fields
-        s.declared_fields = {
-            element.get_name(): mm.fields.Field.from_schema_element(element)
-            for element in schema
-        }
-        s.fields = s._init_fields()  # invoke internal API to bind fields 
-        return s
-
-    def add_element(self, element: abc_schema.AbstractSchemaElement):
-        """ Add a Schema element to this Schema.
-            We're afraid to use internal API to add additional fields.
-            See https://github.com/marshmallow-code/marshmallow/issues/1201.
-            This API is optional, after all.
-        """
-        raise NotImplementedError("Marshmallow API doesn't support adding fields")
-
-
-abc_schema.AbstractSchema.register(MMSchema)
-

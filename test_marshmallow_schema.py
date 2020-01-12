@@ -1,5 +1,6 @@
-""" ABC Marshmallow Schema examples """
-from marshmallow_schema import SchemedObject, MMSchema
+""" Marshmallow Schema Test """
+import pytest
+import marshmallow_schema 
 import abc_schema
 import marshmallow as mm  # type: ignore
 import dataclasses
@@ -7,12 +8,12 @@ import datetime
 import typing
 
 
-class Person(SchemedObject):
-    class Schema(MMSchema):
+class Person(marshmallow_schema.SchemedObject):
+    class Schema(marshmallow_schema.MMSchema):
         name = mm.fields.Str(required=True)
-        email = mm.fields.Email(missing=None)
+        email = mm.fields.Email(required=False,missing=None)
         dob = mm.fields.Date(required=False,missing=None)
-        sex = mm.fields.Str(
+        sex = mm.fields.Str(required=False,
             validate=mm.fields.validate.OneOf(("m", "f", "o", "?")), missing="?"
         )
         education = mm.fields.Dict(
@@ -35,7 +36,7 @@ field = s.fields["education"]
 mm.fields.Field.from_schema_element(field)
 
 # create another Marshmallow schema from s, only using the protocol API to access s (round trip): 
-scopy = MMSchema.from_schema(s)
+scopy = marshmallow_schema.MMSchema.from_schema(s)
 
 
 @dataclasses.dataclass
