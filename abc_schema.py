@@ -7,6 +7,8 @@ import collections.abc
 import enum
 import dataclasses
 
+NotAvailable = NotImplementedError('method not available in this class')
+
 
 class SchemedObject(metaclass=abc.ABCMeta):
     """ An object with a Schema, supporting the __get_schema__ method.
@@ -40,6 +42,12 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         WellknownRepresentation.python
     }
 
+    SupportsCallables:bool = False # must be overwritten if callable input / output is supported
+
+    def get_name(self) ->typing.Optional[str]:
+        """ get name of Schema or None """
+        return getattr(self,'name',None)
+
     @abc.abstractmethod
     def to_external(
         self,
@@ -48,7 +56,8 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         writer_callback: typing.Optional[typing.Callable] = None,
         **params,
     ) -> typing.Optional[typing.Any]:
-        """
+        """ Method to convert a Python structure to the destination 
+
             If *writer_callback* is None (the default), the external representation
             is returned as result.
 
@@ -57,6 +66,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
 
             (inspired by PEP-574 https://www.python.org/dev/peps/pep-0574/#producer-api)
         """
+        self.check_supported_output(destination,writer_callback)
         pass
 
     @abc.abstractmethod
@@ -74,11 +84,34 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
             of times with some arguments to obtain parts of the source representation.
 
         """
+        self.check_supported_input(source,external)
         pass
 
     @abc.abstractmethod
     def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
         pass
+            
+
+    @classmethod
+    def check_supported_input(cls,source : WellknownRepresentation, external: typing.Union[typing.Any, typing.Callable]):
+        """ check whether representation is supported, raise an error otherwise """
+        if source not in cls.SupportedRepresentations:
+            raise NotImplementedError(f"Input representation {source} not supported; choose one of {', '.join([str(r) for r in cls.SupportedRepresentations])}")
+        if not cls.SupportsCallables and callable(external):
+            raise NotImplementedError(f"Callable input not supported by {cls.__name__}")
+            
+        return
+    @classmethod
+    def check_supported_output(cls,destination : WellknownRepresentation, writer_callback: typing.Optional[typing.Callable] = None):
+        """ check whether representation is supported, raise an error otherwise """
+        if destination not in cls.SupportedRepresentations:
+            raise NotImplementedError(f"Input representation {destination} not supported; choose one of {', '.join([str(r) for r in cls.SupportedRepresentations])}")
+        if not cls.SupportsCallables and writer_callback is not None:
+            raise NotImplementedError(f"Callable output not supported by {cls.__name__}")
+            
+        return
+
+
 
     @abc.abstractmethod
     def __iter__(self) -> typing.Iterator["AbstractSchemaElement"]:
@@ -95,11 +128,6 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """
         return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
 
-    def as_field_annotations(self) -> typing.Dict[str, dataclasses.Field]:
-        """ return Schema Elements in DataClass field annotation format.
-            Use as class.__annotations__ = schema.as_field_annotations().
-        """
-        return {se.get_name(): se.get_python_field() for se in self}
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
@@ -119,16 +147,16 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     def from_schema(cls, schema: "AbstractSchema") -> "AbstractSchema":
-        """ Optional API: create a new Schema (in the Schema dialect of the cls) from
+        """ Create a new Schema (in the Schema dialect of the cls) from
             a schema in any Schema Dialect.
         """
         pass
 
-    @abc.abstractmethod
-    def add_element(self, element: "AbstractSchemaElement"):
-        """ Optional API: Add a Schema element (in any Schema Dialect) to this Schema. 
+    def add_element(self, element: "AbstractSchemaElement") -> "AbstractSchemaElement":
+        """ Optional API: Add a Schema element (in any Schema Dialect) to this Schema
+            and returns the created element. 
         """
-        pass
+        raise NotAvailable
 
 
 class AbstractSchemaElement(metaclass=abc.ABCMeta):
@@ -173,10 +201,11 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     def from_schema_element(
-        cls, schema_element: "AbstractSchemaElement"
+        cls, schema_element: "AbstractSchemaElement", parent_schema: typing.Optional[AbstractSchema] = None,
     ) -> "AbstractSchemaElement":
         """ Optional API: create a new AbstractSchemaElement (in the Schema dialect of the cls) from
             a AbstractSchemaElement in any Schema Dialect.
+            parent_schema is the new schema parent of the element. 
         """
         pass
 
@@ -194,17 +223,6 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         # 1st SchemaTypeAnnotation, or None:
         ann = next((a for a in annotated.__metadata__ if isinstance(a,SchemaTypeAnnotation)),None) 
         return pt,ann
-    
-
-    def get_python_field(self) -> dataclasses.Field:
-        """ get Python dataclasses.Field corresponding to AbstractSchemaElement.
-            Unless refined, just packs type and default into a Field and attaches metadata. 
-        """
-        ann = self.get_annotated()
-        default = dataclasses.MISSING if ann.default is MISSING else ann.default # switch our MISSING to dataclasses.MISSING
-        dcfield = dataclasses.field(default=default,metadata=self.get_metadata())
-        dcfield.type = self.get_python_type()
-        return dcfield
 
 class _MISSING_TYPE:
     """ A sentinel object to detect if a parameter is supplied or not.  Use a class to give it a better repr. """
@@ -277,7 +295,7 @@ class SchemaTypeAnnotation:
             if annotation.default is not MISSING:
                 value = annotation.default
             elif annotation.required:
-                raise ValueError('required element must be supplied')
+                raise ValueError(f'required element {schemaElement.get_name()} must be supplied')
         else:
             pt = schemaElement.get_python_type()
             value = pt(value)
