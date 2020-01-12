@@ -1,1 +1,1 @@
-"C:\Program Files\Python37\Scripts\jupyter-notebook.exe" --notebook-dir=%~dp0
+"C:\Program Files\Python38\Scripts\jupyter-notebook.exe" --notebook-dir=%~dp0
