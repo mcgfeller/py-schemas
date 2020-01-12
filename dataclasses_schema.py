@@ -97,16 +97,6 @@ class DCSchema(abc_schema.AbstractSchema):
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
-
-            Meta data is not used at all by the Schema, and is provided as a third-party 
-            extension mechanism. Multiple third-parties can each have their own key, 
-            to use as a namespace in the metadata.
-            (similar to and taken from dataclasses.Field)
-
-            Can be refined; by default an empty dict is returned.
-
-            There is a similar method defined on the AbstractSchemaElement for
-            smetadata attached to a schema element. 
         """
         return {}
 
@@ -195,7 +185,4 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
         return cls(parent_schema,dcfield)
 
 
-    def get_annotated(self) -> type:
-        """ get PEP-593 typing.Annotated type """
-        return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
 
