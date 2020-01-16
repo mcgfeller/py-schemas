@@ -22,7 +22,7 @@ class Person(marshmallow_schema.SchemedObject):
     
 def test_as_annotations():
     """ Sets annotations for Person as side-effect """
-    Person.__annotations__ = Person.Schema().as_annotations()
+    Person.__annotations__ = Person.__get_schema__().as_annotations()
 
 def test_get_schema():
     

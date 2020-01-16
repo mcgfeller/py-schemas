@@ -123,6 +123,12 @@ class MMSchema(mm.Schema):
             field.name = name
             yield field
 
+    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
+        """ return Schema Elements in annotation format.
+            Need to define in MMSchema, as MMSchema does not inheritc from AbstractSchema.
+        """
+        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
+
     def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
         """ return an object from dict, according to the Schema's __objclass__ """
         objclass = getattr(self, "__objclass__", None)
@@ -132,13 +138,6 @@ class MMSchema(mm.Schema):
             o = d
         return o
 
-
-
-    def as_annotations(self) -> typing.Dict[str, typing.Type]:
-        """ return Schema Elements in annotation format.
-            same as in abc_schema, but cannot inherit (cannot subclass due to metaclass conflict).
-        """
-        return {se.get_name(): se.get_python_type() for se in self}
 
     def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
@@ -194,24 +193,24 @@ def get_python_type(self) -> typing.Type:
 
 def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
     """ get SchemaTypeAnnotation  """ 
-    # TODO   
-    return abc_schema.SchemaTypeAnnotation(required=default is abc_schema.MISSING,default=default,metadata=self.field.metadata)
+    default = abc_schema.MISSING if self.missing is mm.missing else self.missing
+    return abc_schema.SchemaTypeAnnotation(required=self.required,default=default,metadata=self.get_metadata())
 
 
-def get_python_field(self) -> dataclasses.Field:
-    """ REMOVE
-        get Python dataclasses.Field corresponding to SchemaElement.
-        Fills default if provided in field. If field is not required and there is no default, make type Optional.
-    """
-    pytype = self.get_python_type()
-    # mm.missing -> dataclasses.MISSING>
-    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
-    
-    if (not self.required) and default is dataclasses.MISSING:
-        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
-    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
-    dcfield.type = pytype
-    return dcfield
+##def get_python_field(self) -> dataclasses.Field:
+##    """ REMOVE
+##        get Python dataclasses.Field corresponding to SchemaElement.
+##        Fills default if provided in field. If field is not required and there is no default, make type Optional.
+##    """
+##    pytype = self.get_python_type()
+##    # mm.missing -> dataclasses.MISSING>
+##    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
+##    
+##    if (not self.required) and default is dataclasses.MISSING:
+##        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
+##    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
+##    dcfield.type = pytype
+##    return dcfield
 
 
 def get_metadata(self) -> typing.Mapping[str, typing.Any]:
@@ -231,27 +230,16 @@ def from_schema_element(
         rely on the protocol API here. 
 
     """
-    pf = schema_element.get_python_field()
-    pt = pf.type
-    required = True
-
-    # Determine whether pt is an Optional type, which is a Union[pt,None] 
-    # typing has very limited inspection features: 
-    if getattr(pt, "__origin__", None) is typing.Union:  # is this typing.Union?
-        if len(pt.__args__) == 2 and pt.__args__[1] in (
-            None,
-            None.__class__,
-        ):  # Optional type
-            pt = pt.__args__[0]  # actual type
-            required = False # optional means it's not required
-
-    mmf = from_python_type(pt, required, pf.default, pf.metadata)
+    ann = schema_element.get_annotation()
+    pt = schema_element.get_python_type()
+    mmf = from_python_type(pt, ann.required, ann.default, ann.metadata)
     if mmf:
         return mmf
     else:
         raise ValueError(
-            f"Cannot determine Marshmallow field for dataclassed.Field {pf} with type {pt} in element {schema_element}"
+            f"Cannot determine Marshmallow field for {schema_element}"
         )
+
 
 
 def from_python_type(
@@ -271,7 +259,7 @@ def from_python_type(
         if not field_class:
             return None
 
-    if default is dataclasses.MISSING:  # dataclasses.MISSING ->  mm.missing
+    if default is abc_schema.MISSING:  # convert abc_schema.MISSING ->  mm.missing
         default = mm.missing
 
     type_factory = getattr(field_class, "_type_factory", None)
@@ -288,8 +276,9 @@ def from_python_type(
 mm.fields.Field.get_schema = get_schema
 mm.fields.Field.get_name = get_name
 mm.fields.Field.get_python_type = get_python_type
-mm.fields.Field.get_python_field = get_python_field
+##mm.fields.Field.get_python_field = get_python_field
 mm.fields.Field.get_metadata = get_metadata
+mm.fields.Field.get_annotation = get_annotation
 mm.fields.Field.from_schema_element = classmethod(from_schema_element)
 
 FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
