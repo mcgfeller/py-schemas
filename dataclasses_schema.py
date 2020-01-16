@@ -84,19 +84,9 @@ class DCSchema(abc_schema.AbstractSchema):
             yield DCSchemaElement(self,field)
             
 
-    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
-        """ return Schema Elements in annotation format.
-            If include_extras (PEP-593) is True, the types returned are typing.Annotated types.
-
-            Use as class.__annotations__ = schema.as_annotations()
-            I would wish that __annotations__ is a protocol that can be provided,
-            instead of simply assuming it is a mapping. 
-        """
-        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
-
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
-        """ return metadata (aka payload data) for this Schema.
+        """ Dataclasses have no metadata per Scheme, so return empty {}.
         """
         return {}
 
