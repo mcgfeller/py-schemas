@@ -9,7 +9,9 @@ It expand on the ideas put forth in my [Dec 17 Blog Post on Python Schemas](http
 
 Despite the popularity of "schema-less" databases, Schemas are needed to validate data and to exchange data with others. The primary goal of this proposal is **interoperability**: Use some package that employs a schema written in a schema solution, without re-coding the schema. 
 
-For example, use an SQLalchemy-schemed object as a `Nested` field in a Marshmallow schema, allowing serialization to JSON. The emphasis is on using Schemas, without prescribing how Schema libraries organize their internals, and how schemas are constructed using these libraries.  
+For example, use an SQLalchemy-schemed object as a `Nested` field in a Marshmallow schema, allowing serialization to JSON. The emphasis is on using Schemas, without prescribing how Schema libraries organize their internals, and how schemas are constructed using these libraries. 
+
+There is a large number of [pre-existing solutions](ExistingSolutions.md). Software created for specific new uses cases, such as GraphQL and some new web frameworks also seem to prefer creating new schema libraries instead of reusing an existing library. There is no agreed leading solution, and no generic interoperability, but many ad-hoc 1-1 adapters. 
 
 ## PEP
 
@@ -52,7 +54,7 @@ There are a number of [Use Cases](UseCases.md) and a large number of [pre-existi
 
 Using the Protocol for a single schema library, such as Marshmallow, does not provide facilities superior over the native usage. However, if the protocol is implemented by several libraries, integration of libraries using different schema facilities becomes much easier.
 
-# Approach
+# Approach to Consensus
 
 Have a Python Special Interest Group (SIG) like [DB SIG](https://www.python.org/community/sigs/current/db-sig/). [Known Schema solutions](ExistingSolutions.md) are candidates to participate. 
 
