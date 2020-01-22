@@ -47,11 +47,13 @@ class MMSchema(mm.Schema):
         abc_schema.WellknownRepresentation.json,
     }
 
-    SupportsCallables:bool = True # callable input / output is supported
+    SupportsCallableIO:bool = True # callable input / output is supported
 
-    def get_name(self) -> str:
-        """ get name of Schema """
-        return None
+    def get_name(self) -> typing.Optional[str]:
+        """ get name of Schema as the name of its __objclass__, if assigned. """
+        c = getattr(self,'__objclass__',None)
+        return c.__name__ if c else None
+        
 
     def to_external(
         self,

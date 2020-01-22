@@ -42,7 +42,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         WellknownRepresentation.python
     }
 
-    SupportsCallables:bool = False # must be overwritten if callable input / output is supported
+    SupportsCallableIO:bool = False # must be overwritten if callable input / output is supported
 
     def get_name(self) ->typing.Optional[str]:
         """ get name of Schema or None """
@@ -97,7 +97,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """ check whether representation is supported, raise an error otherwise """
         if source not in cls.SupportedRepresentations:
             raise NotImplementedError(f"Input representation {source} not supported; choose one of {', '.join([str(r) for r in cls.SupportedRepresentations])}")
-        if not cls.SupportsCallables and callable(external):
+        if not cls.SupportsCallableIO and callable(external):
             raise NotImplementedError(f"Callable input not supported by {cls.__name__}")
             
         return
@@ -106,7 +106,7 @@ class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
         """ check whether representation is supported, raise an error otherwise """
         if destination not in cls.SupportedRepresentations:
             raise NotImplementedError(f"Input representation {destination} not supported; choose one of {', '.join([str(r) for r in cls.SupportedRepresentations])}")
-        if not cls.SupportsCallables and writer_callback is not None:
+        if not cls.SupportsCallableIO and writer_callback is not None:
             raise NotImplementedError(f"Callable output not supported by {cls.__name__}")
             
         return
@@ -214,6 +214,7 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         """ get PEP-593 typing.Annotated type """
         return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
 
+    # TODO:USE?
     @staticmethod
     def split_annotated(annotated : type) -> typing.Tuple[type,typing.Optional['SchemaTypeAnnotation']]:
         """ from a typing.Annotated, return tuple of (type,annotation)
