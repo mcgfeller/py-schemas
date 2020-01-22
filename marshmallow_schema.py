@@ -108,7 +108,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             abc_schema.WellknownRepresentation.python: self.load,
         }
         self.check_supported_input(source,external)
-        method = supported[destination]
+        method = supported[source]
         if callable(external):
             external = external(None)
         d = method(external, **params)
@@ -166,7 +166,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             element.get_name(): mm.fields.Field.from_schema_element(element)
             for element in schema
         }
-        s.fields = s._init_fields()  # invoke internal API to bind fields 
+        s._init_fields()  # invoke internal API to bind fields 
         return s
 
     def add_element(self, element: abc_schema.AbstractSchemaElement):
@@ -183,167 +183,170 @@ abc_schema.AbstractSchema.register(MMSchema)
 """ Methods for Marshmallow fields (will be monkey-patched) """
 
 
-def get_schema(self) -> typing.Optional["MMSchema"]:
-    """ return the Schema or None """
-    return self.root
+class MMfieldSuper(abc_schema.AbstractSchemaElement):
 
 
-def get_name(self) -> str:
-    return self.name
+    FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
+        # fmt: off
+        mm.fields.Integer:          int,
+        mm.fields.Float:            float,
+        mm.fields.Decimal:          decimal.Decimal,
+        mm.fields.Boolean:          bool,
+        mm.fields.Email:            str,    
+        mm.fields.Str:              str, # least specific last
+        mm.fields.DateTime:         datetime.datetime,
+        mm.fields.Time:             datetime.time,
+        mm.fields.Date:             datetime.date,
+        mm.fields.TimeDelta:        datetime.timedelta,
+        mm.fields.Mapping:          typing.Mapping,
+        mm.fields.Dict:             typing.Dict,
+        # fmt: on
+    }
+
+    # reverse list, least specific overwrites most specific:
+    PythonType_to_FieldType = {pt: ft for ft, pt in FieldType_to_PythonType.items()}
+
+    # Types from typing have a _name field - I found no other way to determine what typing.Dict actually is:
+    TypingName_to_FieldType: typing.Dict[str, mm.fields.FieldABC] = {
+        # fmt: off
+        'Dict':                     mm.fields.Dict,
+        # fmt: on
+    }
+
+    def get_schema(self) -> typing.Optional["MMSchema"]:
+        """ return the Schema or None """
+        return self.root
 
 
-def get_python_type(self) -> typing.Type:
-    """ get native type of field. 
-
-    """
-    return FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
-
-def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
-    """ get SchemaTypeAnnotation  """ 
-    default = abc_schema.MISSING if self.missing is mm.missing else self.missing
-    return abc_schema.SchemaTypeAnnotation(required=self.required,default=default,metadata=self.get_metadata())
+    def get_name(self) -> str:
+        return self.name
 
 
-##def get_python_field(self) -> dataclasses.Field:
-##    """ REMOVE
-##        get Python dataclasses.Field corresponding to SchemaElement.
-##        Fills default if provided in field. If field is not required and there is no default, make type Optional.
-##    """
-##    pytype = self.get_python_type()
-##    # mm.missing -> dataclasses.MISSING>
-##    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
-##    
-##    if (not self.required) and default is dataclasses.MISSING:
-##        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
-##    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
-##    dcfield.type = pytype
-##    return dcfield
+    def get_python_type(self) -> typing.Type:
+        """ get native type of field. 
+
+        """
+        return self.FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
+
+    def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
+        """ get SchemaTypeAnnotation  """ 
+        default = abc_schema.MISSING if self.missing is mm.missing else self.missing
+        return abc_schema.SchemaTypeAnnotation(required=self.required,default=default,metadata=self.get_metadata())
 
 
-def get_metadata(self) -> typing.Mapping[str, typing.Any]:
-    """ return metadata (aka payload data) for this SchemaElement.
-    """
-    return self.metadata
+    ##def get_python_field(self) -> dataclasses.Field:
+    ##    """ REMOVE
+    ##        get Python dataclasses.Field corresponding to SchemaElement.
+    ##        Fills default if provided in field. If field is not required and there is no default, make type Optional.
+    ##    """
+    ##    pytype = self.get_python_type()
+    ##    # mm.missing -> dataclasses.MISSING>
+    ##    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
+    ##    
+    ##    if (not self.required) and default is dataclasses.MISSING:
+    ##        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
+    ##    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
+    ##    dcfield.type = pytype
+    ##    return dcfield
 
 
-def from_schema_element(
-    cls, schema_element: abc_schema.AbstractSchemaElement
-) -> mm.fields.Field:
-    """ Classmethod: Create a new Marshmallow Field from
-        a AbstractSchemaElement in any Schema Dialect.
+    def get_metadata(self) -> typing.Mapping[str, typing.Any]:
+        """ return metadata (aka payload data) for this SchemaElement.
+        """
+        return self.metadata
 
-        In a real implementation, we could return schema_element unchanged
-        if isinstance(schema_element,mm.fields.Field). However, we only
-        rely on the protocol API here. 
+    
+    @classmethod
+    def from_schema_element(
+        cls, schema_element: abc_schema.AbstractSchemaElement
+    ) -> mm.fields.Field:
+        """ Classmethod: Create a new Marshmallow Field from
+            a AbstractSchemaElement in any Schema Dialect.
 
-    """
-    ann = schema_element.get_annotation()
-    pt = schema_element.get_python_type()
-    mmf = from_python_type(pt, ann.required, ann.default, ann.metadata)
-    if mmf:
-        return mmf
-    else:
-        raise ValueError(
-            f"Cannot determine Marshmallow field for {schema_element}"
-        )
+            In a real implementation, we could return schema_element unchanged
+            if isinstance(schema_element,mm.fields.Field). However, we only
+            rely on the protocol API here. 
+
+        """
+        ann = schema_element.get_annotation()
+        pt = schema_element.get_python_type()
+        mmf = cls.from_python_type(pt, ann.required, ann.default, ann.metadata)
+        if mmf:
+            return mmf
+        else:
+            raise ValueError(
+                f"Cannot determine Marshmallow field for {schema_element}"
+            )
 
 
-
-def from_python_type(
-    pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: typing.Mapping[str, typing.Any] = None
-) -> typing.Optional[mm.fields.Field]:
-    """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
-        We first check the special _name convention for typing.Type, 
-        then check whether the FieldType has a _type_factory or is constructed by its class.
-    """
-    pt_name = getattr(pt, "_name", None)
-    if pt_name:
-        field_class = TypingName_to_FieldType.get(pt_name)
-    else:
-        field_class = None
-    if not field_class:
-        field_class = PythonType_to_FieldType.get(pt)
+    @classmethod
+    def from_python_type(cls, 
+        pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: typing.Mapping[str, typing.Any] = None
+    ) -> typing.Optional[mm.fields.Field]:
+        """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
+            We first check the special _name convention for typing.Type, 
+            then check whether the FieldType has a _type_factory or is constructed by its class.
+        """
+        pt_name = getattr(pt, "_name", None)
+        if pt_name:
+            field_class = cls.TypingName_to_FieldType.get(pt_name)
+        else:
+            field_class = None
         if not field_class:
-            return None
+            field_class = cls.PythonType_to_FieldType.get(pt)
+            if not field_class:
+                return None
 
-    if default is abc_schema.MISSING:  # convert abc_schema.MISSING ->  mm.missing
-        default = mm.missing
+        if default is abc_schema.MISSING:  # convert abc_schema.MISSING ->  mm.missing
+            default = mm.missing
 
-    type_factory = getattr(field_class, "_type_factory", None)
-    if type_factory:
-        mmf = type_factory(pt, required=required, default=default, metadata=metadata)
-    else:
-        mmf = field_class(
-            required=required, missing=default, default=default, metadata=metadata
+        type_factory = getattr(field_class, "_type_factory", None)
+        if type_factory:
+            mmf = type_factory(pt, required=required, default=default, metadata=metadata)
+        else:
+            mmf = field_class(
+                required=required, missing=default, default=default, metadata=metadata
+            )
+        return mmf
+
+
+# monkey-patch Field by adding superclass:
+mm.fields.Field.__bases__ += (MMfieldSuper,)
+
+
+
+
+class MMmappingSuper(abc_schema.AbstractSchemaElement):
+
+    def get_python_type(self) -> type:
+        """ get native classes of containers and build Dict type
+            Simplified - either container is a Field, or we use Any.
+        """
+        kt = (
+            self.key_field.get_python_type()
+            if isinstance(self.key_field, mm.fields.FieldABC)
+            else typing.Type[typing.Any]
         )
-    return mmf
+        vt = (
+            self.value_field.get_python_type()
+            if isinstance(self.value_field, mm.fields.FieldABC)
+            else typing.Type[typing.Any]
+        )
+        return typing.Mapping[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
 
+    @classmethod
+    def type_factory(
+        cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
+    ) -> mm.fields.Field:
+        """ get MM fields.Dict from Python type. 
+            get key class and value class (both can be None), then construct Dict.
+        """
+        kc = cls.from_python_type(pt.__args__[0])
+        vc = cls.from_python_type(pt.__args__[1])
+        return cls(
+            keys=kc, values=vc, required=required, missing=default, default=default, metadata=metadata
+        )
 
-# monkey-patch all Fields:
-mm.fields.Field.get_schema = get_schema
-mm.fields.Field.get_name = get_name
-mm.fields.Field.get_python_type = get_python_type
-##mm.fields.Field.get_python_field = get_python_field
-mm.fields.Field.get_metadata = get_metadata
-mm.fields.Field.get_annotation = get_annotation
-mm.fields.Field.from_schema_element = classmethod(from_schema_element)
+# monkey-patch Mapping by adding superclass:
+mm.fields.Mapping.__bases__ += (MMmappingSuper,)
 
-FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
-    # fmt: off
-    mm.fields.Integer:          int,
-    mm.fields.Float:            float,
-    mm.fields.Decimal:          decimal.Decimal,
-    mm.fields.Boolean:          bool,
-    mm.fields.Email:            str,    
-    mm.fields.Str:              str, # least specific last
-    mm.fields.DateTime:         datetime.datetime,
-    mm.fields.Time:             datetime.time,
-    mm.fields.Date:             datetime.date,
-    mm.fields.TimeDelta:        datetime.timedelta,
-    mm.fields.Dict:             typing.Dict,
-    # fmt: on
-}
-
-# reverse list, least specific overwrites most specific:
-PythonType_to_FieldType = {pt: ft for ft, pt in FieldType_to_PythonType.items()}
-
-# Types from typing have a _name field - I found no other way to determine what typing.Dict actually is:
-TypingName_to_FieldType: typing.Dict[str, mm.fields.FieldABC] = {
-    # fmt: off
-    'Dict':                     mm.fields.Dict,
-    # fmt: on
-}
-
-
-def _dict_get_python_type(self) -> type:
-    """ get native classes of containers and build Dict type
-        Simplified - either container is a Field, or we use Any.
-    """
-    kt = (
-        self.key_field.get_python_type()
-        if isinstance(self.key_field, mm.fields.FieldABC)
-        else typing.Type[typing.Any]
-    )
-    vt = (
-        self.value_field.get_python_type()
-        if isinstance(self.value_field, mm.fields.FieldABC)
-        else typing.Type[typing.Any]
-    )
-    return typing.Dict[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
-
-
-def _dict_type_factory(
-    cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
-) -> mm.fields.Field:
-    """ get MM fields.Dict from Python type. 
-        get key class and value class (both can be None), then construct Dict.
-    """
-    kc = from_python_type(pt.__args__[0])
-    vc = from_python_type(pt.__args__[1])
-    return cls(
-        keys=kc, values=vc, required=required, missing=default, default=default, metadata=metadata
-    )
-
-
-mm.fields.Dict.get_python_type = _dict_get_python_type
-mm.fields.Dict._type_factory = classmethod(_dict_type_factory)

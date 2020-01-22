@@ -3,7 +3,6 @@ import pytest
 import marshmallow_schema 
 import abc_schema
 import marshmallow as mm  # type: ignore
-import dataclasses
 import datetime
 import typing
 
@@ -39,7 +38,9 @@ def test_get_schema():
 def test_schema_from_schema():
     p = Person()
     s = p.__get_schema__()
-    s2 = marshmallow_schema.MMSchema.from_schema(s)   
+    s2 = marshmallow_schema.MMSchema.from_schema(s)
+    assert sorted([e.name for e in s]) == sorted([e.name for e in s2]),'element names do not match'
+    return
 
 
 def test_validation():
@@ -52,18 +53,18 @@ def test_validation():
     assert s.validate_internal(o_good).sex == 'm'
     assert s.validate_internal(o_conv).dob == datetime.date(2001, 1, 1)
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(Exception) as excinfo:
         s.validate_internal(o_bad).sex == 'm'
         
 
 def test_import_export():     
     o_conv  = makePerson(sex='M')
     s = Person.__get_schema__()
-    assert s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
-    assert s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
+    assert s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
+    assert s.from_external(o_conv,source=marshmallow_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
 
     with pytest.raises(NotImplementedError) as excinfo: # xml conversion is not implemented
-        s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'
+        s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'
 
 def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}):
     p = Person()
