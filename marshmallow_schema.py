@@ -39,8 +39,13 @@ class SchemedObject:
 
 abc_schema.SchemedObject.register(SchemedObject)
 
+class _MMSchemaMeta(mm.schema.SchemaMeta,type(abc_schema.AbstractSchema)):
+    """ Combined meta class from Marshmallow and abc.ABCMeta, so we can inherit from both """
+    ...
 
-class MMSchema(mm.Schema):
+
+
+class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
     SupportedRepresentations = {
         abc_schema.WellknownRepresentation.python,
@@ -125,11 +130,11 @@ class MMSchema(mm.Schema):
             field.name = name
             yield field
 
-    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
-        """ return Schema Elements in annotation format.
-            Need to define in MMSchema, as MMSchema does not inheritc from AbstractSchema.
-        """
-        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
+##    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
+##        """ return Schema Elements in annotation format.
+##            Need to define in MMSchema, as MMSchema does not inheritc from AbstractSchema.
+##        """
+##        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
 
     def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
         """ return an object from dict, according to the Schema's __objclass__ """

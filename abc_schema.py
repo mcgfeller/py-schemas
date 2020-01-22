@@ -32,7 +32,7 @@ class WellknownRepresentation(enum.Enum):
     # fmt: on
 
 
-class AbstractSchema(collections.abc.Iterable, metaclass=abc.ABCMeta):
+class AbstractSchema(collections.abc.Iterable):
     """ The AbstractSchema does not prescribe how the Schema is organized, and
         only prescribes that the AbstractSchemaElement may be obtained by iterating
         over the Schema.
