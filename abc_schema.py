@@ -296,9 +296,23 @@ class SchemaTypeAnnotation:
             if annotation.default is not MISSING:
                 value = annotation.default
             elif annotation.required:
-                raise ValueError(f'required element {schemaElement.get_name()} must be supplied')
+                raise ValidationError(f'required element {schemaElement.get_name()} must be supplied')
         else:
             pt = schemaElement.get_python_type()
-            value = pt(value)
+            try:
+                value = pt(value)
+            except Exception as e:
+                raise ValidationError(str(e),original_error=e)
         return value
 
+class SchemaError(Exception):
+    """ Base class for all schema-related errors. """
+    def __init__(self,message,original_error=None):
+        self.message = message
+        self.original_error = original_error
+        return
+
+class ValidationError(SchemaError,ValueError):
+    """ Denotes invalid data """
+    ...
+    

@@ -16,6 +16,7 @@ class Person(marshmallow_schema.SchemedObject):
         education = mm.fields.Dict(
             keys=mm.fields.Str(), values=mm.fields.Date(), payload="field metadata"
         )
+        employed = mm.fields.Bool(missing=False)
 
 
     def __init__(self,**kw):
@@ -31,7 +32,7 @@ def test_get_schema():
     p = Person()
     s = p.__get_schema__()
     # Schema manipulations:
-    assert len({se.get_name(): se.get_python_type() for se in s}) == 5
+    assert len({se.get_name(): se.get_python_type() for se in s}) == 6
     assert s.fields["name"].get_schema() is s
     assert s.fields["education"].get_metadata() == {"payload": "field metadata"}
 
@@ -48,16 +49,18 @@ def test_schema_from_schema():
 
 def test_validation():
     o_good  = makePerson()
-    o_conv  = makePerson(dob=datetime.date(2001, 1, 1))
+    o_conv  = makePerson(employed='Yes',dob=datetime.date(2001, 1, 1))
     o_bad   = makePerson(sex='x')
 
 
     s = Person.__get_schema__()
     assert s.validate_internal(o_good).sex == 'm'
     assert s.validate_internal(o_conv).dob == datetime.date(2001, 1, 1)
+    assert s.validate_internal(o_conv).employed is True
 
-    with pytest.raises(Exception) as excinfo:
-        s.validate_internal(o_bad).sex == 'm'
+    with pytest.raises(abc_schema.ValidationError) as excinfo:
+        s.validate_internal(o_bad)
+    return
         
 
 def test_import_export():     
@@ -70,8 +73,8 @@ def test_import_export():
     with pytest.raises(NotImplementedError) as excinfo: # xml conversion is not implemented
         s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'
 
-def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}):
-    p = Person(name=name,email=email,sex=sex,dob=dob,education=education)
+def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}, employed=False):
+    p = Person(name=name,email=email,sex=sex,dob=dob,education=education,employed=employed)
     return p
 
 if __name__ == '__main__':

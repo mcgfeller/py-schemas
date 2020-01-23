@@ -2,6 +2,7 @@
 import pytest
 import dataclasses_schema
 import dataclasses
+import abc_schema
 
 
 
@@ -36,7 +37,7 @@ def test_validation():
     assert s.validate_internal(o_good).unit_price == 2.2
     assert s.validate_internal(o_conv).unit_price == 2.2
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(abc_schema.ValidationError) as excinfo:
         s.validate_internal(o_bad).unit_price == 2.2
         
 

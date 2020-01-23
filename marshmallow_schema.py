@@ -83,7 +83,10 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         
         self.check_supported_output(destination,writer_callback)
         method = supported[destination]
-        e = method(obj, **params)
+        try: # translate error
+            e = method(obj, **params)
+        except mm.exceptions.ValidationError as verror:
+            raise abc_schema.ValidationError(str(verror),original_error=verror)
         if writer_callback:
             return writer_callback(e)
         else:
@@ -108,7 +111,11 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             abc_schema.WellknownRepresentation.python: self.load,
         }
         self.check_supported_input(source,external)
-        method = supported[source]
+        try: # translate error
+            method = supported[source]
+        except mm.exceptions.ValidationError as verror:
+            raise abc_schema.ValidationError(str(verror),original_error=verror)
+
         if callable(external):
             external = external(None)
         d = method(external, **params)
@@ -118,10 +125,14 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
     def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
         """ Marshmallow doesn't provide validation on the object - we need to dump it.
-            As Schema.validate returns a dict, but we want an error raised, we call .load() instead.
-            However, if the validation doesn't raise an error, we return the argument obj unchanged. 
+            We want conversion of values, such as Bool alternatives, so we dump/load and reapply the object_factory.
+            Validation errors are raised.
         """
-        dummy = self.load(self.dump(obj))  # may raise an error
+        try: # translate error
+            d = self.load(self.dump(obj))  # may raise an error
+        except mm.exceptions.ValidationError as verror:
+            raise abc_schema.ValidationError(str(verror),original_error=verror)
+        obj = self.object_factory(d) # we have to re-convert to an object
         return obj
 
     def __iter__(self)  -> mm.fields.FieldABC:
@@ -227,23 +238,6 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         """ get SchemaTypeAnnotation  """ 
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing
         return abc_schema.SchemaTypeAnnotation(required=self.required,default=default,metadata=self.get_metadata())
-
-
-    ##def get_python_field(self) -> dataclasses.Field:
-    ##    """ REMOVE
-    ##        get Python dataclasses.Field corresponding to SchemaElement.
-    ##        Fills default if provided in field. If field is not required and there is no default, make type Optional.
-    ##    """
-    ##    pytype = self.get_python_type()
-    ##    # mm.missing -> dataclasses.MISSING>
-    ##    default = dataclasses.MISSING if self.missing is mm.missing else self.missing
-    ##    
-    ##    if (not self.required) and default is dataclasses.MISSING:
-    ##        pytype = typing.Optional[pytype]  # type: ignore # I don't understand mypy's problem here!
-    ##    dcfield = dataclasses.field(default=default, metadata=self.get_metadata())
-    ##    dcfield.type = pytype
-    ##    return dcfield
-
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
