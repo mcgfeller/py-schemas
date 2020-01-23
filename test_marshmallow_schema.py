@@ -18,6 +18,9 @@ class Person(marshmallow_schema.SchemedObject):
         )
 
 
+    def __init__(self,**kw):
+        self.__dict__.update(kw)
+
     
 def test_as_annotations():
     """ Sets annotations for Person as side-effect """
@@ -58,10 +61,11 @@ def test_validation():
         
 
 def test_import_export():     
-    o_conv  = makePerson(sex='M')
+    o_conv  = makePerson(sex='m')
     s = Person.__get_schema__()
-    assert s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
-    assert s.from_external(o_conv,source=marshmallow_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
+    ext = s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.python)
+    assert ext['sex'] == 'm'
+    assert s.from_external(ext,source=marshmallow_schema.abc_schema.WellknownRepresentation.python).sex == 'm'
 
     with pytest.raises(NotImplementedError) as excinfo: # xml conversion is not implemented
         s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'

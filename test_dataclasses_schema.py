@@ -43,8 +43,9 @@ def test_validation():
 def test_import_export():     
     o_conv  = InventoryItem(name='name',unit_price='2.2')
     s = dataclasses_schema.DCSchema.get_schema(InventoryItem)
-    assert s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.python).unit_price == 2.2
-    assert s.from_external(o_conv,source=dataclasses_schema.abc_schema.WellknownRepresentation.python).unit_price == 2.2
+    ext = s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.python)
+    assert ext.unit_price == 2.2
+    assert s.from_external(ext,source=dataclasses_schema.abc_schema.WellknownRepresentation.python).unit_price == 2.2
 
     with pytest.raises(NotImplementedError) as excinfo: # json conversion is not implemented
         s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.json).unit_price == 2.2
