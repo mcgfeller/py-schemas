@@ -126,15 +126,10 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
     def __iter__(self)  -> mm.fields.FieldABC:
         """ iterator through SchemaElements in this Schema, sett """
-        for name, field in self._declared_fields.items():
+        for name, field in self.declared_fields.items():
             field.name = name
             yield field
 
-##    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
-##        """ return Schema Elements in annotation format.
-##            Need to define in MMSchema, as MMSchema does not inheritc from AbstractSchema.
-##        """
-##        return {se.get_name(): se.get_annotated() if include_extras else se.get_python_type() for se in self}
 
     def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
         """ return an object from dict, according to the Schema's __objclass__ """
@@ -166,7 +161,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             element.get_name(): mm.fields.Field.from_schema_element(element)
             for element in schema
         }
-        s._init_fields()  # invoke internal API to bind fields 
+        s._init_fields()  # invoke internal API to bind fields
         return s
 
     def add_element(self, element: abc_schema.AbstractSchemaElement):
