@@ -71,8 +71,7 @@ def test_import_export():
         s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'
 
 def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}):
-    p = Person()
-    p.__dict__.update({'name':name,'email':email,'sex':sex,'dob':dob,'education':education})
+    p = Person(name=name,email=email,sex=sex,dob=dob,education=education)
     return p
 
 if __name__ == '__main__':
