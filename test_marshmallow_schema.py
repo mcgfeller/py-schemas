@@ -17,6 +17,7 @@ class Person(marshmallow_schema.SchemedObject):
             keys=mm.fields.Str(), values=mm.fields.Date(), payload="field metadata"
         )
         employed = mm.fields.Bool(missing=False)
+        hobbies = mm.fields.List(mm.fields.Str())
 
 
     def __init__(self,**kw):
@@ -32,7 +33,7 @@ def test_get_schema():
     p = Person()
     s = p.__get_schema__()
     # Schema manipulations:
-    assert len({se.get_name(): se.get_python_type() for se in s}) == 6
+    assert len({se.get_name(): se.get_python_type() for se in s}) == len(s.fields)
     assert s.fields["name"].get_schema() is s
     assert s.fields["education"].get_metadata() == {"payload": "field metadata"}
 
@@ -73,8 +74,8 @@ def test_import_export():
     with pytest.raises(NotImplementedError) as excinfo: # xml conversion is not implemented
         s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.xml).sex == 'm'
 
-def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}, employed=False):
-    p = Person(name=name,email=email,sex=sex,dob=dob,education=education,employed=employed)
+def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education={'Gymnasium Raemibuehl': datetime.date(1981, 9, 1)}, employed=False, hobbies = ['reading']):
+    p = Person(name=name,email=email,sex=sex,dob=dob,education=education,employed=employed,hobbies=hobbies)
     return p
 
 if __name__ == '__main__':

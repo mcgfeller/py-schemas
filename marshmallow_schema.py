@@ -7,7 +7,6 @@ import marshmallow as mm  # type: ignore
 import decimal
 import datetime
 import abc_schema
-import dataclasses
 import typing
 import typing_extensions
 
@@ -216,6 +215,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
     TypingName_to_FieldType: typing.Dict[str, mm.fields.FieldABC] = {
         # fmt: off
         'Dict':                     mm.fields.Dict,
+		'List':						mm.fields.List,
         # fmt: on
     }
 
@@ -270,7 +270,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
 
     @classmethod
     def from_python_type(cls, 
-        pt: type, required: bool = True, default: typing.Any = dataclasses.MISSING, metadata: typing.Mapping[str, typing.Any] = None
+        pt: type, required: bool = True, default: typing.Any = mm.missing, metadata: typing.Mapping[str, typing.Any] = None
     ) -> typing.Optional[mm.fields.Field]:
         """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
             We first check the special _name convention for typing.Type, 
@@ -321,10 +321,10 @@ class MMmappingSuper(abc_schema.AbstractSchemaElement):
             if isinstance(self.value_field, mm.fields.FieldABC)
             else typing.Type[typing.Any]
         )
-        return typing.Mapping[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
+        return typing.Dict[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
 
     @classmethod
-    def type_factory(
+    def _type_factory(
         cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
     ) -> mm.fields.Field:
         """ get MM fields.Dict from Python type. 
@@ -337,5 +337,33 @@ class MMmappingSuper(abc_schema.AbstractSchemaElement):
         )
 
 # monkey-patch Mapping by adding superclass:
-mm.fields.Mapping.__bases__ += (MMmappingSuper,)
+mm.fields.Mapping.__bases__ = (MMmappingSuper,) + mm.fields.Mapping.__bases__  
 
+
+class MMlistSuper(abc_schema.AbstractSchemaElement):
+
+    def get_python_type(self) -> type:
+        """ get native classes of containers and build Dict type
+            Simplified - either container is a Field, or we use Any.
+        """
+        vt = (
+            self.inner.get_python_type()
+            if isinstance(self.inner, mm.fields.FieldABC)
+            else typing.Type[typing.Any]
+        )
+        return typing.List[vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
+
+    @classmethod
+    def _type_factory(
+        cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
+    ) -> mm.fields.Field:
+        """ get MM fields.Dict from Python type. 
+            get key class and value class (both can be None), then construct Dict.
+        """
+        vc = cls.from_python_type(pt.__args__[0])
+        return cls(vc, required=required, missing=default, default=default, metadata=metadata)
+        
+
+
+# monkey-patch Mapping by adding superclass:
+mm.fields.List.__bases__  = (MMlistSuper,) + mm.fields.List.__bases__  
