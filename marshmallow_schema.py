@@ -189,6 +189,7 @@ abc_schema.AbstractSchema.register(MMSchema)
 
 
 class MMfieldSuper(abc_schema.AbstractSchemaElement):
+    """ Mixin class (for monkey-patching base class so we don't have to reinherit all Fields """
 
 
     FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
@@ -205,19 +206,20 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         mm.fields.TimeDelta:        datetime.timedelta,
         mm.fields.Mapping:          typing.Mapping,
         mm.fields.Dict:             typing.Dict,
+        mm.fields.List:             typing.List,
         # fmt: on
     }
 
     # reverse list, least specific overwrites most specific:
     PythonType_to_FieldType = {pt: ft for ft, pt in FieldType_to_PythonType.items()}
 
-    # Types from typing have a _name field - I found no other way to determine what typing.Dict actually is:
-    TypingName_to_FieldType: typing.Dict[str, mm.fields.FieldABC] = {
+    # Types from typing have an __origin__ field of the underlying class (as typing.Dict[x,y] reveal typing.Dict):
+    PythonType_to_FieldType.update({
         # fmt: off
-        'Dict':                     mm.fields.Dict,
-		'List':						mm.fields.List,
+        dict:                       mm.fields.Dict,
+        list:                       mm.fields.List,
         # fmt: on
-    }
+        })
 
     def get_schema(self) -> typing.Optional["MMSchema"]:
         """ return the Schema or None """
@@ -273,18 +275,13 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         pt: type, required: bool = True, default: typing.Any = mm.missing, metadata: typing.Mapping[str, typing.Any] = None
     ) -> typing.Optional[mm.fields.Field]:
         """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
-            We first check the special _name convention for typing.Type, 
+            We first check the special __origin__ convention for typing.Type to reveal its base type,
             then check whether the FieldType has a _type_factory or is constructed by its class.
         """
-        pt_name = getattr(pt, "_name", None)
-        if pt_name:
-            field_class = cls.TypingName_to_FieldType.get(pt_name)
-        else:
-            field_class = None
+        basetype = getattr(pt, "__origin__", pt) # typing type.__origin__ is Python class
+        field_class = cls.PythonType_to_FieldType.get(basetype)
         if not field_class:
-            field_class = cls.PythonType_to_FieldType.get(pt)
-            if not field_class:
-                return None
+            return None
 
         if default is abc_schema.MISSING:  # convert abc_schema.MISSING ->  mm.missing
             default = mm.missing
@@ -343,7 +340,7 @@ mm.fields.Mapping.__bases__ = (MMmappingSuper,) + mm.fields.Mapping.__bases__
 class MMlistSuper(abc_schema.AbstractSchemaElement):
 
     def get_python_type(self) -> type:
-        """ get native classes of containers and build Dict type
+        """ get native classes of containers and build List type
             Simplified - either container is a Field, or we use Any.
         """
         vt = (
@@ -357,8 +354,8 @@ class MMlistSuper(abc_schema.AbstractSchemaElement):
     def _type_factory(
         cls, pt: typing.Type, required: bool, default: typing.Any, metadata: dict
     ) -> mm.fields.Field:
-        """ get MM fields.Dict from Python type. 
-            get key class and value class (both can be None), then construct Dict.
+        """ get MM fields.List from Python type. 
+            get value class (can be None), then construct mm.fields.List.
         """
         vc = cls.from_python_type(pt.__args__[0])
         return cls(vc, required=required, missing=default, default=default, metadata=metadata)
