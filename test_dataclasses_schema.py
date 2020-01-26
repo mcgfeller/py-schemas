@@ -21,7 +21,7 @@ class InventoryItem:
 
 def test_schema_from_class():
     s = dataclasses_schema.DCSchema.get_schema(InventoryItem)
-    s.as_annotations(include_extras=True)
+    s.get_annotations(include_extras=True)
 
 def test_schema_from_schema():
     s = dataclasses_schema.DCSchema.get_schema(InventoryItem)

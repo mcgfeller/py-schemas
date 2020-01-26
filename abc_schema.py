@@ -91,7 +91,7 @@ class AbstractSchema(collections.abc.Iterable):
 
     @abc.abstractmethod
     def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
-        pass
+        return obj
             
 
     @classmethod
@@ -120,11 +120,11 @@ class AbstractSchema(collections.abc.Iterable):
         """ iterator through SchemaElements in this Schema """
         pass
 
-    def as_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
+    def get_annotations(self,include_extras: bool = False) -> typing.Dict[str, typing.Type]:
         """ return Schema Elements in annotation format.
             If include_extras (PEP-593) is True, the types returned are typing.Annotated types.
 
-            Use as class.__annotations__ = schema.as_annotations()
+            Use as class.__annotations__ = schema.get_annotations()
             I would wish that __annotations__ is a protocol that can be provided,
             instead of simply assuming it is a mapping. 
         """
@@ -184,7 +184,7 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_annotation(self) -> typing.Optional['SchemaTypeAnnotation']:
         """ Optional: get SchemaTypeAnnotation of this AbstractSchemaElement """
-        return
+        pass
 
 
 
@@ -215,17 +215,6 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
     def get_annotated(self) -> type:
         """ get PEP-593 typing.Annotated type """
         return typing_extensions.Annotated[self.get_python_type(),self.get_annotation()]
-
-    # TODO:USE?
-    @staticmethod
-    def split_annotated(annotated : type) -> typing.Tuple[type,typing.Optional['SchemaTypeAnnotation']]:
-        """ from a typing.Annotated, return tuple of (type,annotation)
-            Note that there may be multiple Annotations, we take the first one that is a SchemaTypeAnnotation.
-        """ 
-        pt = typing.get_args(annotated)[0]
-        # 1st SchemaTypeAnnotation, or None:
-        ann = next((a for a in annotated.__metadata__ if isinstance(a,SchemaTypeAnnotation)),None) 
-        return pt,ann
 
 class _MISSING_TYPE:
     """ A sentinel object to detect if a parameter is supplied or not.  Use a class to give it a better repr. """

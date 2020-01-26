@@ -19,7 +19,6 @@ class DCSchema(abc_schema.AbstractSchema):
         re-create everything on the fly.
     """
 
-    dataclass : type
 
     def __init__(self,dataclass):
         if dataclass and not dataclasses.is_dataclass(dataclass):

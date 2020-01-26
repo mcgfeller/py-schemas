@@ -24,9 +24,9 @@ class Person(marshmallow_schema.SchemedObject):
         self.__dict__.update(kw)
 
     
-def test_as_annotations():
+def test_get_annotations():
     """ Sets annotations for Person as side-effect """
-    Person.__annotations__ = Person.__get_schema__().as_annotations()
+    Person.__annotations__ = Person.__get_schema__().get_annotations()
 
 def test_get_schema():
     
@@ -79,7 +79,7 @@ def makePerson(name="Martin", email="mgf@acm.org", sex="m", dob=None, education=
     return p
 
 if __name__ == '__main__':
-    test_as_annotations()
+    test_get_annotations()
     test_get_schema()
     test_schema_from_schema()
     test_validation()

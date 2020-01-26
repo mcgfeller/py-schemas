@@ -13,7 +13,7 @@ import typing_extensions
 
 
 
-class SchemedObject:
+class SchemedObject(abc_schema.SchemedObject):
     """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
         Schema. It defines one class method .__get_schema__, to return that Schema.
 
@@ -38,7 +38,7 @@ class SchemedObject:
 
 abc_schema.SchemedObject.register(SchemedObject)
 
-class _MMSchemaMeta(mm.schema.SchemaMeta,type(abc_schema.AbstractSchema)):
+class _MMSchemaMeta(mm.schema.SchemaMeta,abc_schema.abc.ABCMeta):
     """ Combined meta class from Marshmallow and abc.ABCMeta, so we can inherit from both """
     ...
 
@@ -51,7 +51,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         abc_schema.WellknownRepresentation.json,
     }
 
-    SupportsCallableIO:bool = True # callable input / output is supported
+    SupportsCallableIO = True # callable input / output is supported
 
     def get_name(self) -> typing.Optional[str]:
         """ get name of Schema as the name of its __objclass__, if assigned. """
@@ -61,7 +61,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
     def to_external(
         self,
-        obj: SchemedObject,
+        obj:  abc_schema.SchemedObject,
         destination: abc_schema.WellknownRepresentation,
         writer_callback: typing.Optional[typing.Callable] = None,
         **params,
@@ -96,7 +96,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         external: typing.Union[typing.Any, typing.Callable],
         source: abc_schema.WellknownRepresentation,
         **params,
-    ) -> typing.Union[SchemedObject, typing.Dict[typing.Any, typing.Any]]:
+    ) -> typing.Union[ abc_schema.SchemedObject, typing.Dict[typing.Any, typing.Any]]:
 
         """
             If *external* is bytes, they are consumed as source representation.
@@ -124,7 +124,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
         return o
 
-    def validate_internal(self, obj: SchemedObject, **params) -> SchemedObject:
+    def validate_internal(self, obj: abc_schema.SchemedObject, **params) -> SchemedObject:
         """ Marshmallow doesn't provide validation on the object - we need to dump it.
             We want conversion of values, such as Bool alternatives, so we dump/load and reapply the object_factory.
             Validation errors are raised.
@@ -136,7 +136,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         obj = self.object_factory(d) # we have to re-convert to an object
         return obj
 
-    def __iter__(self)  -> mm.fields.FieldABC:
+    def __iter__(self)  -> typing.Iterator[mm.fields.Field]:
         """ iterator through SchemaElements in this Schema, sett """
         for name, field in self.declared_fields.items():
             field.name = name
