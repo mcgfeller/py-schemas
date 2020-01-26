@@ -281,7 +281,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
             We first check the special __origin__ convention for typing.Type to reveal its base type,
             then check whether the FieldType has a _type_factory or is constructed by its class.
         """
-        basetype = getattr(pt, "__origin__", pt) # typing type.__origin__ is Python class
+        basetype = typing.get_origin(pt) or pt # typing type.__origin__ is Python class
         field_class = cls.PythonType_to_FieldType.get(basetype)
         if not field_class:
             return None
@@ -330,8 +330,8 @@ class MMmappingSuper(abc_schema.AbstractSchemaElement):
         """ get MM fields.Dict from Python type. 
             get key class and value class (both can be None), then construct Dict.
         """
-        kc = cls.from_python_type(pt.__args__[0])
-        vc = cls.from_python_type(pt.__args__[1])
+        kc = cls.from_python_type(typing.get_args(pt)[0])
+        vc = cls.from_python_type(typing.get_args(pt)[1])
         return cls(
             keys=kc, values=vc, required=required, missing=default, default=default, metadata=metadata
         )
@@ -360,7 +360,7 @@ class MMlistSuper(abc_schema.AbstractSchemaElement):
         """ get MM fields.List from Python type. 
             get value class (can be None), then construct mm.fields.List.
         """
-        vc = cls.from_python_type(pt.__args__[0])
+        vc = cls.from_python_type(typing.get_args(pt)[0])
         return cls(vc, required=required, missing=default, default=default, metadata=metadata)
         
 

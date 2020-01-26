@@ -222,7 +222,7 @@ class AbstractSchemaElement(metaclass=abc.ABCMeta):
         """ from a typing.Annotated, return tuple of (type,annotation)
             Note that there may be multiple Annotations, we take the first one that is a SchemaTypeAnnotation.
         """ 
-        pt = annotated.__args__[0]
+        pt = typing.get_args(annotated)[0]
         # 1st SchemaTypeAnnotation, or None:
         ann = next((a for a in annotated.__metadata__ if isinstance(a,SchemaTypeAnnotation)),None) 
         return pt,ann
@@ -301,7 +301,7 @@ class SchemaTypeAnnotation:
                 raise ValidationError(f'required element {schemaElement.get_name()} must be supplied')
         else:
             pt = schemaElement.get_python_type()
-            basetype = getattr(pt, "__origin__", pt) # typing type.__origin__ is Python class
+            basetype = typing.get_origin(pt) or pt # typing type.__origin__ is Python class
             try:
                 value = basetype(value)
             except Exception as e:
