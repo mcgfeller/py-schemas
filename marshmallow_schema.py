@@ -117,6 +117,8 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
         if callable(external):
             external = external(None)
+        elif hasattr(external,'__dict__'): # Python export may yield object
+            external = external.__dict__ 
         d = method(external, **params)
         o = self.object_factory(d)
 

@@ -14,10 +14,10 @@ class Person(marshmallow_schema.SchemedObject):
         dob = mm.fields.Date(missing=None)
         sex = mm.fields.Str(validate=mm.fields.validate.OneOf(("m", "f", "o", "?")), missing="?")
         education = mm.fields.Dict(
-            keys=mm.fields.Str(), values=mm.fields.Date(), payload="field metadata"
+            keys=mm.fields.Str(), values=mm.fields.Date(), payload="field metadata",missing=dict
         )
         employed = mm.fields.Bool(missing=False)
-        hobbies = mm.fields.List(mm.fields.Str())
+        hobbies = mm.fields.List(mm.fields.Str(),missing=list)
 
 
     def __init__(self,**kw):
@@ -64,7 +64,7 @@ def test_validation():
     return
         
 
-def test_import_export():     
+def test_export_import():     
     o_conv  = makePerson(sex='m')
     s = Person.__get_schema__()
     ext = s.to_external(o_conv,destination=marshmallow_schema.abc_schema.WellknownRepresentation.python)
@@ -83,4 +83,4 @@ if __name__ == '__main__':
     test_get_schema()
     test_schema_from_schema()
     test_validation()
-    test_import_export()
+    test_export_import()

@@ -41,7 +41,7 @@ def test_validation():
         s.validate_internal(o_bad).unit_price == 2.2
         
 
-def test_import_export():     
+def test_export_import():     
     o_conv  = InventoryItem(name='name',unit_price='2.2')
     s = dataclasses_schema.DCSchema.get_schema(InventoryItem)
     ext = s.to_external(o_conv,destination=dataclasses_schema.abc_schema.WellknownRepresentation.python)
@@ -56,6 +56,6 @@ if __name__ == '__main__':
     test_schema_from_class()
     test_schema_from_schema()
     test_validation()
-    test_import_export()
+    test_export_import()
 
 

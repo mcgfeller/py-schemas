@@ -299,8 +299,9 @@ class SchemaTypeAnnotation:
                 raise ValidationError(f'required element {schemaElement.get_name()} must be supplied')
         else:
             pt = schemaElement.get_python_type()
+            basetype = getattr(pt, "__origin__", pt) # typing type.__origin__ is Python class
             try:
-                value = pt(value)
+                value = basetype(value)
             except Exception as e:
                 raise ValidationError(str(e),original_error=e)
         return value

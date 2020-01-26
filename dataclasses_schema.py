@@ -60,7 +60,7 @@ class DCSchema(abc_schema.AbstractSchema):
     ) -> abc_schema.SchemedObject:
 
         """
-            Dataclasses only support validation, so from_external is the same as internal_validation(). 
+            Dataclasses only support validation, so from_external is identical to internal_validation()
 
         """
         self.check_supported_input(source,external)
@@ -68,12 +68,15 @@ class DCSchema(abc_schema.AbstractSchema):
 
 
     def validate_internal(self, obj: abc_schema.SchemedObject, **params) -> abc_schema.SchemedObject:
+        d = obj.__dict__  if hasattr(obj,'__dict__') else obj # Python export may yield object
         for element in self:
             ann = element.get_annotation()
             name = element.get_name()
-            nobj = abc_schema.SchemaTypeAnnotation.validate_internal(ann,element,getattr(obj,name,None))
-            if obj is not nobj:
-                setattr(obj,name,nobj)
+            newd = abc_schema.SchemaTypeAnnotation.validate_internal(ann,element,d.get(name,dataclasses.MISSING))
+            if newd is not dataclasses.MISSING:
+                d[name] = newd
+
+        obj = self.dataclass(**d) # instantiate object
         return obj
 
 
@@ -100,6 +103,10 @@ class DCSchema(abc_schema.AbstractSchema):
         for element in schema:
             field = DCSchemaElement.from_schema_element(element,parent_schema=dcschema).field
             fields.append((field.name,field.type,field))
+
+        # dataclasses fields with defaults must be ordered after those without, because the dataclass
+        # contructor works with keyword arguments for defaults:
+        fields = sorted(fields,key=lambda t: t[2].default is not dataclasses.MISSING) 
             
         name = schema.get_name() or f'dc_{id(schema)}'
         dcschema.dataclass = dataclasses.make_dataclass(name, fields, namespace={'get_schema': lambda self,dcschema=dcschema:dcschema}, **kw) 
