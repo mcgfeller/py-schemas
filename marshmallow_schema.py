@@ -168,6 +168,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             See https://github.com/marshmallow-code/marshmallow/issues/1201.
         """
         s = MMSchema(context=schema.get_metadata())  # base Schema
+        s.__objclass__ = schema.__objclass__ # obj class is same
         # add fields
         s.declared_fields = {
             element.get_name(): mm.fields.Field.from_schema_element(element)

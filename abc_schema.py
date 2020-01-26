@@ -42,7 +42,9 @@ class AbstractSchema(collections.abc.Iterable):
         WellknownRepresentation.python
     }
 
-    SupportsCallableIO:bool = False # must be overwritten if callable input / output is supported
+    SupportsCallableIO: typing.ClassVar[bool] = False # must be overwritten if callable input / output is supported
+
+    __objclass__: typing.Optional[typing.Type] = None # class of the corresponding object
 
     def get_name(self) ->typing.Optional[str]:
         """ get name of Schema or None """

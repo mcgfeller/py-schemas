@@ -24,11 +24,11 @@ class DCSchema(abc_schema.AbstractSchema):
     def __init__(self,dataclass):
         if dataclass and not dataclasses.is_dataclass(dataclass):
             raise TypeError(f'{dataclass} must be a dataclass')
-        self.dataclass = dataclass
+        self.__objclass__ = dataclass  # assign dataclass to schema.__objclass__
 
     def get_name(self) -> str:
         """ get name of Schema, which is the name of the dataclass """
-        return self.dataclass.__name__
+        return self.__objclass__.__name__
         
 
     @classmethod
@@ -76,14 +76,14 @@ class DCSchema(abc_schema.AbstractSchema):
             if newd is not dataclasses.MISSING:
                 d[name] = newd
 
-        obj = self.dataclass(**d) # instantiate object
+        obj = self.__objclass__(**d) # instantiate object
         return obj
 
 
     def __iter__(self) -> typing.Iterator['DCSchemaElement']:
         """ iterator through SchemaElements in this Schema """
 
-        for field in dataclasses.fields(self.dataclass):
+        for field in dataclasses.fields(self.__objclass__):
             yield DCSchemaElement(self,field)
             
 
@@ -109,7 +109,7 @@ class DCSchema(abc_schema.AbstractSchema):
         fields = sorted(fields,key=lambda t: t[2].default is not dataclasses.MISSING) 
             
         name = schema.get_name() or f'dc_{id(schema)}'
-        dcschema.dataclass = dataclasses.make_dataclass(name, fields, namespace={'get_schema': lambda self,dcschema=dcschema:dcschema}, **kw) 
+        dcschema.__objclass__ = dataclasses.make_dataclass(name, fields, namespace={'get_schema': lambda self,dcschema=dcschema:dcschema}, **kw) 
         return dcschema
 
 
