@@ -48,6 +48,10 @@ class AbstractSchema(collections.abc.Iterable):
 
         It also defines method to get annotations, and to create a Schema from
         another AbstractSchema. 
+
+        The __objclass__ optionally contains the class this is the Schema, for
+        so schema.__objclass__.__get_schema__() is schema. This may be used to
+        recreate objects when transforming from excternal representations.  
     """
 
     SupportedRepresentations: typing.ClassVar[typing.Set["WellknownRepresentation"]] = {

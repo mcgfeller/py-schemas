@@ -1,6 +1,7 @@
 """ Marshmallow based conformant Schema.
-    Marshmallow fields are monkey-patched.
-    Marshmallow schema is subclassed. 
+    Marshmallow fields handling is coded in a mixin class, which is monkey-patched as a base class of the Marshmallow Field class.
+    This allows to control the behavior of all fields, without trating them individually. 
+    The Marshmallow schema is subclassed. 
 """
 
 import marshmallow as mm  # type: ignore
@@ -44,6 +45,8 @@ class _MMSchemaMeta(mm.schema.SchemaMeta, abc_schema.abc.ABCMeta):
 
 
 class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
+    """ Marshmallow Schema, supporting the AbstracSchema protocol. 
+    """
 
     SupportedRepresentations = {
         abc_schema.WellknownRepresentation.python,
@@ -136,7 +139,7 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
         return obj
 
     def __iter__(self) -> typing.Iterator[mm.fields.Field]:
-        """ iterator through SchemaElements in this Schema, sett """
+        """ iterator through SchemaElements in this Schema, sets field.name """
         for name, field in self.declared_fields.items():
             field.name = name
             yield field
@@ -152,9 +155,6 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
 
     def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
-            Meta data is not used at all by the Schema, and is provided as a third-party 
-            extension mechanism. Multiple third-parties can each have their own key, 
-            to use as a namespace in the metadata (similar to and taken from dataclasses.Field)
         """
         return self.context
 
@@ -166,7 +166,7 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
         """
         s = MMSchema(context=schema.get_metadata())  # base Schema
         s.__objclass__ = schema.__objclass__  # obj class is same
-        # add fields
+        # iterate through fields and add the to our schema's declared_fields:
         s.declared_fields = {
             element.get_name(): mm.fields.Field.from_schema_element(element)
             for element in schema
@@ -184,7 +184,6 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
 
 
 abc_schema.AbstractSchema.register(MMSchema)
-""" Methods for Marshmallow fields (will be monkey-patched) """
 
 
 class MMfieldSuper(abc_schema.AbstractSchemaElement):
@@ -197,7 +196,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         mm.fields.Decimal:          decimal.Decimal,
         mm.fields.Boolean:          bool,
         mm.fields.Email:            str,    
-        mm.fields.Str:              str, # least specific last
+        mm.fields.Str:              str, # least specific last for reversal below
         mm.fields.DateTime:         datetime.datetime,
         mm.fields.Time:             datetime.time,
         mm.fields.Date:             datetime.date,
@@ -230,13 +229,12 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
 
     def get_python_type(self) -> typing.Type:
         """ get native type of field. 
-
         """
         return self.FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
 
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
         """ get SchemaTypeAnnotation  """
-        default = abc_schema.MISSING if self.missing is mm.missing else self.missing
+        default = abc_schema.MISSING if self.missing is mm.missing else self.missing # convert missing
         return abc_schema.SchemaTypeAnnotation(
             required=self.required, default=default, metadata=self.get_metadata()
         )

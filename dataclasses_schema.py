@@ -11,7 +11,7 @@ import typing_extensions
 
 
 class DCSchema(abc_schema.AbstractSchema):
-    """ Schema for dataclasses: Light-weight, we just store a reference to the dataclass and
+    """ Schema for dataclasses: Light-weight, we just store a reference to the dataclass in __objclass__ and
         re-create everything on the fly.
     """
 
@@ -58,6 +58,9 @@ class DCSchema(abc_schema.AbstractSchema):
     def validate_internal(
         self, obj: abc_schema.SchemedObject, **params
     ) -> abc_schema.SchemedObject:
+        """ Perform validation by iterating over elements and
+            calling SchemaTypeAnnotation.validate_internal
+        """
         d = (
             obj.__dict__ if hasattr(obj, "__dict__") else obj
         )  # Python export may yield object
