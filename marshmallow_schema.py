@@ -40,7 +40,6 @@ abc_schema.SchemedObject.register(SchemedObject)
 
 class _MMSchemaMeta(mm.schema.SchemaMeta, abc_schema.abc.ABCMeta):
     """ Combined meta class from Marshmallow and abc.ABCMeta, so we can inherit from both """
-
     ...
 
 
@@ -217,8 +216,6 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         list:                       mm.fields.List,
         # fmt: on
         })
-        }
-    )
 
     def get_schema(self) -> typing.Optional["MMSchema"]:
         """ return the Schema or None """
