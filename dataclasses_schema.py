@@ -10,31 +10,24 @@ import typing
 import typing_extensions
 
 
-
-
-
-
 class DCSchema(abc_schema.AbstractSchema):
     """ Schema for dataclasses: Light-weight, we just store a reference to the dataclass and
         re-create everything on the fly.
     """
 
-
-    def __init__(self,dataclass):
+    def __init__(self, dataclass):
         if dataclass and not dataclasses.is_dataclass(dataclass):
-            raise TypeError(f'{dataclass} must be a dataclass')
+            raise TypeError(f"{dataclass} must be a dataclass")
         self.__objclass__ = dataclass  # assign dataclass to schema.__objclass__
 
     def get_name(self) -> str:
         """ get name of Schema, which is the name of the dataclass """
         return self.__objclass__.__name__
-        
 
     @classmethod
-    def get_schema(cls,dataclass) -> 'DCSchema':
+    def get_schema(cls, dataclass) -> "DCSchema":
         """ create DCSchema from dataclass """
         return cls(dataclass)
-
 
     def to_external(
         self,
@@ -46,10 +39,8 @@ class DCSchema(abc_schema.AbstractSchema):
         """
             Dataclasses only support validation, so to_external is the same as internal_validation(). 
         """
-        self.check_supported_output(destination,writer_callback)
-        return self.validate_internal(obj,**params)
-
-
+        self.check_supported_output(destination, writer_callback)
+        return self.validate_internal(obj, **params)
 
     def from_external(
         self,
@@ -57,35 +48,36 @@ class DCSchema(abc_schema.AbstractSchema):
         source: abc_schema.WellknownRepresentation,
         **params,
     ) -> abc_schema.SchemedObject:
-
         """
             Dataclasses only support validation, so from_external is identical to internal_validation()
 
         """
-        self.check_supported_input(source,external)
-        return self.validate_internal(external,**params)
+        self.check_supported_input(source, external)
+        return self.validate_internal(external, **params)
 
-
-    def validate_internal(self, obj: abc_schema.SchemedObject, **params) -> abc_schema.SchemedObject:
-        d = obj.__dict__  if hasattr(obj,'__dict__') else obj # Python export may yield object
+    def validate_internal(
+        self, obj: abc_schema.SchemedObject, **params
+    ) -> abc_schema.SchemedObject:
+        d = (
+            obj.__dict__ if hasattr(obj, "__dict__") else obj
+        )  # Python export may yield object
         for element in self:
             ann = element.get_annotation()
             name = element.get_name()
-            newd = abc_schema.SchemaTypeAnnotation.validate_internal(ann,element,d.get(name,dataclasses.MISSING))
+            newd = abc_schema.SchemaTypeAnnotation.validate_internal(
+                ann, element, d.get(name, dataclasses.MISSING)
+            )
             if newd is not dataclasses.MISSING:
                 d[name] = newd
 
-        obj = self.__objclass__(**d) # instantiate object
+        obj = self.__objclass__(**d)  # instantiate object
         return obj
 
-
-    def __iter__(self) -> typing.Iterator['DCSchemaElement']:
+    def __iter__(self) -> typing.Iterator["DCSchemaElement"]:
         """ iterator through SchemaElements in this Schema """
 
         for field in dataclasses.fields(self.__objclass__):
-            yield DCSchemaElement(self,field)
-            
-
+            yield DCSchemaElement(self, field)
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ Dataclasses have no metadata per Scheme, so return empty {}.
@@ -100,31 +92,34 @@ class DCSchema(abc_schema.AbstractSchema):
         dcschema = cls(None)
         fields = []
         for element in schema:
-            field = DCSchemaElement.from_schema_element(element,parent_schema=dcschema).field
-            fields.append((field.name,field.type,field))
+            field = DCSchemaElement.from_schema_element(
+                element, parent_schema=dcschema
+            ).field
+            fields.append((field.name, field.type, field))
 
         # dataclasses fields with defaults must be ordered after those without, because the dataclass
         # contructor works with keyword arguments for defaults:
-        fields = sorted(fields,key=lambda t: t[2].default is not dataclasses.MISSING) 
-            
-        name = schema.get_name() or f'dc_{id(schema)}'
-        dcschema.__objclass__ = dataclasses.make_dataclass(name, fields, namespace={'get_schema': lambda self,dcschema=dcschema:dcschema}, **kw) 
+        fields = sorted(fields, key=lambda t: t[2].default is not dataclasses.MISSING)
+
+        name = schema.get_name() or f"dc_{id(schema)}"
+        dcschema.__objclass__ = dataclasses.make_dataclass(
+            name,
+            fields,
+            namespace={"get_schema": lambda self, dcschema=dcschema: dcschema},
+            **kw,
+        )
         return dcschema
 
 
-
-
-            
-            
 class DCSchemaElement(abc_schema.AbstractSchemaElement):
     """ Holds one SchemaElement of a Schema. No represenation is prescribed, hence there is no constructor.
         The SchemaTypeAnnotation, however, prescribes a representation. It can either be attached to the 
         SchemaElement, or generated from it when queried by .get_annotation(). 
     """
 
-    def __init__(self,schema : DCSchema,field : dataclasses.Field):
-        if not isinstance(schema,DCSchema):
-            raise TypeError(f'{schema} must be a DCSchema')
+    def __init__(self, schema: DCSchema, field: dataclasses.Field):
+        if not isinstance(schema, DCSchema):
+            raise TypeError(f"{schema} must be a DCSchema")
         self.schema = schema
         self.field = field
 
@@ -140,19 +135,22 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
         """ get Python type of this AbstractSchemaElement """
         return self.field.type
 
-
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
         """ get SchemaTypeAnnotation of this DCSchemaElement """
-        default = self.field.default # substitute dataclass field missing with our missing
-        if default is dataclasses.MISSING: 
+        default = (
+            self.field.default
+        )  # substitute dataclass field missing with our missing
+        if default is dataclasses.MISSING:
             if self.field.default_factory is dataclasses.MISSING:
                 default = abc_schema.MISSING
             else:
                 default = self.field.default_factory
 
-        return abc_schema.SchemaTypeAnnotation(required=default is abc_schema.MISSING,default=default,metadata=self.field.metadata)
-
-
+        return abc_schema.SchemaTypeAnnotation(
+            required=default is abc_schema.MISSING,
+            default=default,
+            metadata=self.field.metadata,
+        )
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
@@ -161,24 +159,27 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
 
     @classmethod
     def from_schema_element(
-        cls, schema_element: abc_schema.AbstractSchemaElement, parent_schema : DCSchema
-    ) -> 'DCSchemaElement':
+        cls, schema_element: abc_schema.AbstractSchemaElement, parent_schema: DCSchema
+    ) -> "DCSchemaElement":
         """ create a new DCSchemaElement from
             a AbstractSchemaElement in any Schema Dialect.
             We create a dataclasses.Field and then wrap it within a DCSchemaElement.
         """
         ann = schema_element.get_annotation()
-        default = dataclasses.MISSING if ann.default is abc_schema.MISSING else ann.default # switch our MISSING to dataclasses.MISSING
-        if callable(default): # callables goes into default_factory for fields.
+        default = (
+            dataclasses.MISSING if ann.default is abc_schema.MISSING else ann.default
+        )  # switch our MISSING to dataclasses.MISSING
+        if callable(default):  # callables goes into default_factory for fields.
             default_factory = default
-            default =  dataclasses.MISSING
+            default = dataclasses.MISSING
         else:
             default_factory = dataclasses.MISSING
         # Make a dataclasses Field:
-        dcfield = dataclasses.field(default=default,default_factory=default_factory, metadata=schema_element.get_metadata())
+        dcfield = dataclasses.field(
+            default=default,
+            default_factory=default_factory,
+            metadata=schema_element.get_metadata(),
+        )
         dcfield.name = schema_element.get_name()
         dcfield.type = schema_element.get_python_type()
-        return cls(parent_schema,dcfield)
-
-
-
+        return cls(parent_schema, dcfield)

@@ -11,8 +11,6 @@ import typing
 import typing_extensions
 
 
-
-
 class SchemedObject(abc_schema.SchemedObject):
     """ SchemedObject is the - entirely optional - superclass that can be used for classes that have an associated
         Schema. It defines one class method .__get_schema__, to return that Schema.
@@ -38,30 +36,30 @@ class SchemedObject(abc_schema.SchemedObject):
 
 abc_schema.SchemedObject.register(SchemedObject)
 
-class _MMSchemaMeta(mm.schema.SchemaMeta,abc_schema.abc.ABCMeta):
+
+class _MMSchemaMeta(mm.schema.SchemaMeta, abc_schema.abc.ABCMeta):
     """ Combined meta class from Marshmallow and abc.ABCMeta, so we can inherit from both """
+
     ...
 
 
-
-class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
+class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
 
     SupportedRepresentations = {
         abc_schema.WellknownRepresentation.python,
         abc_schema.WellknownRepresentation.json,
     }
 
-    SupportsCallableIO = True # callable input / output is supported
+    SupportsCallableIO = True  # callable input / output is supported
 
     def get_name(self) -> typing.Optional[str]:
         """ get name of Schema as the name of its __objclass__, if assigned. """
-        c = getattr(self,'__objclass__',None)
+        c = getattr(self, "__objclass__", None)
         return c.__name__ if c else None
-        
 
     def to_external(
         self,
-        obj:  abc_schema.SchemedObject,
+        obj: abc_schema.SchemedObject,
         destination: abc_schema.WellknownRepresentation,
         writer_callback: typing.Optional[typing.Callable] = None,
         **params,
@@ -79,13 +77,13 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             abc_schema.WellknownRepresentation.json: self.dumps,
             abc_schema.WellknownRepresentation.python: self.dump,
         }
-        
-        self.check_supported_output(destination,writer_callback)
+
+        self.check_supported_output(destination, writer_callback)
         method = supported[destination]
-        try: # translate error
+        try:  # translate error
             e = method(obj, **params)
         except mm.exceptions.ValidationError as verror:
-            raise abc_schema.ValidationError(str(verror),original_error=verror)
+            raise abc_schema.ValidationError(str(verror), original_error=verror)
         if writer_callback:
             return writer_callback(e)
         else:
@@ -96,8 +94,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         external: typing.Union[typing.Any, typing.Callable],
         source: abc_schema.WellknownRepresentation,
         **params,
-    ) -> typing.Union[ abc_schema.SchemedObject, typing.Dict[typing.Any, typing.Any]]:
-
+    ) -> typing.Union[abc_schema.SchemedObject, typing.Dict[typing.Any, typing.Any]]:
         """
             If *external* is bytes, they are consumed as source representation.
 
@@ -109,39 +106,40 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             abc_schema.WellknownRepresentation.json: self.loads,
             abc_schema.WellknownRepresentation.python: self.load,
         }
-        self.check_supported_input(source,external)
-        try: # translate error
+        self.check_supported_input(source, external)
+        try:  # translate error
             method = supported[source]
         except mm.exceptions.ValidationError as verror:
-            raise abc_schema.ValidationError(str(verror),original_error=verror)
+            raise abc_schema.ValidationError(str(verror), original_error=verror)
 
         if callable(external):
             external = external(None)
-        elif hasattr(external,'__dict__'): # Python export may yield object
-            external = external.__dict__ 
+        elif hasattr(external, "__dict__"):  # Python export may yield object
+            external = external.__dict__
         d = method(external, **params)
         o = self.object_factory(d)
 
         return o
 
-    def validate_internal(self, obj: abc_schema.SchemedObject, **params) -> SchemedObject:
+    def validate_internal(
+        self, obj: abc_schema.SchemedObject, **params
+    ) -> SchemedObject:
         """ Marshmallow doesn't provide validation on the object - we need to dump it.
             We want conversion of values, such as Bool alternatives, so we dump/load and reapply the object_factory.
             Validation errors are raised.
         """
-        try: # translate error
+        try:  # translate error
             d = self.load(self.dump(obj))  # may raise an error
         except mm.exceptions.ValidationError as verror:
-            raise abc_schema.ValidationError(str(verror),original_error=verror)
-        obj = self.object_factory(d) # we have to re-convert to an object
+            raise abc_schema.ValidationError(str(verror), original_error=verror)
+        obj = self.object_factory(d)  # we have to re-convert to an object
         return obj
 
-    def __iter__(self)  -> typing.Iterator[mm.fields.Field]:
+    def __iter__(self) -> typing.Iterator[mm.fields.Field]:
         """ iterator through SchemaElements in this Schema, sett """
         for name, field in self.declared_fields.items():
             field.name = name
             yield field
-
 
     def object_factory(self, d: dict) -> typing.Union[SchemedObject, dict]:
         """ return an object from dict, according to the Schema's __objclass__ """
@@ -151,7 +149,6 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
         else:
             o = d
         return o
-
 
     def get_metadata(self) -> typing.MutableMapping[str, typing.Any]:
         """ return metadata (aka payload data) for this Schema.
@@ -168,7 +165,7 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
             See https://github.com/marshmallow-code/marshmallow/issues/1201.
         """
         s = MMSchema(context=schema.get_metadata())  # base Schema
-        s.__objclass__ = schema.__objclass__ # obj class is same
+        s.__objclass__ = schema.__objclass__  # obj class is same
         # add fields
         s.declared_fields = {
             element.get_name(): mm.fields.Field.from_schema_element(element)
@@ -187,13 +184,11 @@ class MMSchema(mm.Schema,abc_schema.AbstractSchema,metaclass=_MMSchemaMeta):
 
 
 abc_schema.AbstractSchema.register(MMSchema)
-
 """ Methods for Marshmallow fields (will be monkey-patched) """
 
 
 class MMfieldSuper(abc_schema.AbstractSchemaElement):
     """ Mixin class (for monkey-patching base class so we don't have to reinherit all Fields """
-
 
     FieldType_to_PythonType: typing.Dict[mm.fields.FieldABC, typing.Type] = {
         # fmt: off
@@ -223,15 +218,15 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         list:                       mm.fields.List,
         # fmt: on
         })
+        }
+    )
 
     def get_schema(self) -> typing.Optional["MMSchema"]:
         """ return the Schema or None """
         return self.root
 
-
     def get_name(self) -> str:
         return self.name
-
 
     def get_python_type(self) -> typing.Type:
         """ get native type of field. 
@@ -240,16 +235,17 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         return self.FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
 
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
-        """ get SchemaTypeAnnotation  """ 
+        """ get SchemaTypeAnnotation  """
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing
-        return abc_schema.SchemaTypeAnnotation(required=self.required,default=default,metadata=self.get_metadata())
+        return abc_schema.SchemaTypeAnnotation(
+            required=self.required, default=default, metadata=self.get_metadata()
+        )
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
         """
         return self.metadata
 
-    
     @classmethod
     def from_schema_element(
         cls, schema_element: abc_schema.AbstractSchemaElement
@@ -268,20 +264,21 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         if mmf:
             return mmf
         else:
-            raise ValueError(
-                f"Cannot determine Marshmallow field for {schema_element}"
-            )
-
+            raise ValueError(f"Cannot determine Marshmallow field for {schema_element}")
 
     @classmethod
-    def from_python_type(cls, 
-        pt: type, required: bool = True, default: typing.Any = mm.missing, metadata: typing.Mapping[str, typing.Any] = None
+    def from_python_type(
+        cls,
+        pt: type,
+        required: bool = True,
+        default: typing.Any = mm.missing,
+        metadata: typing.Mapping[str, typing.Any] = None,
     ) -> typing.Optional[mm.fields.Field]:
         """ Create a new Marshmallow Field from a python type, either type, class, or typing.Type.
             We first check the special __origin__ convention for typing.Type to reveal its base type,
             then check whether the FieldType has a _type_factory or is constructed by its class.
         """
-        basetype = typing.get_origin(pt) or pt # typing type.__origin__ is Python class
+        basetype = typing.get_origin(pt) or pt  # typing type.__origin__ is Python class
         field_class = cls.PythonType_to_FieldType.get(basetype)
         if not field_class:
             return None
@@ -291,7 +288,9 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
 
         type_factory = getattr(field_class, "_type_factory", None)
         if type_factory:
-            mmf = type_factory(pt, required=required, default=default, metadata=metadata)
+            mmf = type_factory(
+                pt, required=required, default=default, metadata=metadata
+            )
         else:
             mmf = field_class(
                 required=required, missing=default, default=default, metadata=metadata
@@ -303,10 +302,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
 mm.fields.Field.__bases__ += (MMfieldSuper,)
 
 
-
-
 class MMmappingSuper(abc_schema.AbstractSchemaElement):
-
     def get_python_type(self) -> type:
         """ get native classes of containers and build Dict type
             Simplified - either container is a Field, or we use Any.
@@ -321,7 +317,9 @@ class MMmappingSuper(abc_schema.AbstractSchemaElement):
             if isinstance(self.value_field, mm.fields.FieldABC)
             else typing.Type[typing.Any]
         )
-        return typing.Dict[kt, vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
+        return typing.Dict[
+            kt, vt
+        ]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
 
     @classmethod
     def _type_factory(
@@ -333,15 +331,20 @@ class MMmappingSuper(abc_schema.AbstractSchemaElement):
         kc = cls.from_python_type(typing.get_args(pt)[0])
         vc = cls.from_python_type(typing.get_args(pt)[1])
         return cls(
-            keys=kc, values=vc, required=required, missing=default, default=default, metadata=metadata
+            keys=kc,
+            values=vc,
+            required=required,
+            missing=default,
+            default=default,
+            metadata=metadata,
         )
 
+
 # monkey-patch Mapping by adding superclass:
-mm.fields.Mapping.__bases__ = (MMmappingSuper,) + mm.fields.Mapping.__bases__  
+mm.fields.Mapping.__bases__ = (MMmappingSuper,) + mm.fields.Mapping.__bases__
 
 
 class MMlistSuper(abc_schema.AbstractSchemaElement):
-
     def get_python_type(self) -> type:
         """ get native classes of containers and build List type
             Simplified - either container is a Field, or we use Any.
@@ -351,7 +354,9 @@ class MMlistSuper(abc_schema.AbstractSchemaElement):
             if isinstance(self.inner, mm.fields.FieldABC)
             else typing.Type[typing.Any]
         )
-        return typing.List[vt]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
+        return typing.List[
+            vt
+        ]  # type: ignore # mypy cannot handle this dynamic typing without a plugin!
 
     @classmethod
     def _type_factory(
@@ -361,9 +366,11 @@ class MMlistSuper(abc_schema.AbstractSchemaElement):
             get value class (can be None), then construct mm.fields.List.
         """
         vc = cls.from_python_type(typing.get_args(pt)[0])
-        return cls(vc, required=required, missing=default, default=default, metadata=metadata)
-        
+        return cls(
+            vc, required=required, missing=default, default=default, metadata=metadata
+        )
 
 
 # monkey-patch Mapping by adding superclass:
-mm.fields.List.__bases__  = (MMlistSuper,) + mm.fields.List.__bases__  
+mm.fields.List.__bases__ = (MMlistSuper,) + mm.fields.List.__bases__
+
