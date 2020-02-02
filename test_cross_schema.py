@@ -32,6 +32,20 @@ def test_export_mm_import_dc():
     p2 = dcs.from_external(ext, source=abc_schema.WellknownRepresentation.python)
     assert p2.sex == "m"
 
+def test_export_mm_import_dc_fail():
+    """ Export Marshmallow object and import as dataclass, with validation fail """
+    p1 = makePerson(sex="bad")
+    mms = Person.__get_schema__()
+    ext = mms.to_external(p1, destination=abc_schema.WellknownRepresentation.python)
+
+    with pytest.raises(abc_schema.ValidationError) as excinfo:    
+        p2 = mms.from_external(ext, source=abc_schema.WellknownRepresentation.python)
+
+    dcs = dataclasses_schema.DCSchema.from_schema(mms)
+    with pytest.raises(abc_schema.ValidationError) as excinfo:    
+        p3 = dcs.from_external(ext, source=abc_schema.WellknownRepresentation.python)
+    
+
 
 def test_mm_from_dataclasses():
     """ Transform Marshmallow schema to dataclasses schema """
@@ -73,3 +87,4 @@ if __name__ == "__main__":
     test_export_dc_import_mm()
     test_export_mm_import_dc()
     test_export_dc_import_mm_json()
+    test_export_mm_import_dc_fail()
