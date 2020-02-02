@@ -277,6 +277,10 @@ class SchemaTypeAnnotation:
     """ Annotation holding SchemaElement typing information to go as 2nd parameter into typing_extensions.Annotated.
         Unlike the AbstractSchemaElement, the SchemaTypeAnnotation is concrete and prescribes a minimal representation.
 
+        A subclass of AbstractSchema may or may not use the to_external, from_external or validate_internal
+        methods, at its convience. It may have its own transformation approach, for example working on the whole object
+        at once instead of at the element level. 
+
         
     """
 
@@ -311,16 +315,14 @@ class SchemaTypeAnnotation:
         annotation: "SchemaTypeAnnotation",
         schemaElement: AbstractSchemaElement,
         value: typing.Any,
+        destination: WellknownRepresentation,
         writer_callback: typing.Optional[typing.Callable] = None,
         **params,
     ) -> typing.Optional[typing.Any]:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
-            The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
-
-            Default implementation:
-            
-            Passes external to schemaElement.get_python_type() by default.
+        """ Externalize value in schemaElement to destination.
+            The arguments are the same as in AbstractSchema.to_external(). Params must be passed down. 
         """
+        pass
 
     @staticmethod  # can be overritten by passing a function to the constructor
     def from_external(
@@ -330,13 +332,10 @@ class SchemaTypeAnnotation:
         source: WellknownRepresentation,
         **params,
     ) -> typing.Any:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
+        """ Internalize and validate data from external source. Returns internal form, or raises error.
             The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
-
-            Default implementation:
-            
-            Passes external to schemaElement.get_python_type() by default.
         """
+        pass
 
     @staticmethod  # can be overritten by passing a function to the constructor
     def validate_internal(
@@ -345,7 +344,7 @@ class SchemaTypeAnnotation:
         value: typing.Any,
         **params,
     ) -> typing.Any:
-        """ Validation method, to transform external and validate it. Returns internal form, or raises error.
+        """ Validation method, to transform value and validate it. Returns internal form (possibly unchanged value), or raises error.
             The arguments are the same as in AbstractSchema.from_external(). Params must be passed down. 
 
             Default implementation:
