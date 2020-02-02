@@ -109,16 +109,17 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
             abc_schema.WellknownRepresentation.python: self.load,
         }
         self.check_supported_input(source, external)
-        try:  # translate error
-            method = supported[source]
-        except mm.exceptions.ValidationError as verror:
-            raise abc_schema.ValidationError(str(verror), original_error=verror)
+        method = supported[source]
 
         if callable(external):
             external = external(None)
         elif hasattr(external, "__dict__"):  # Python export may yield object
             external = external.__dict__
-        d = method(external, **params)
+
+        try:  # translate error        
+            d = method(external, **params)
+        except mm.exceptions.ValidationError as verror:
+            raise abc_schema.ValidationError(str(verror), original_error=verror)
         o = self.object_factory(d)
 
         return o
@@ -233,7 +234,8 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         """ get SchemaTypeAnnotation  """
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing # convert missing
         return abc_schema.SchemaTypeAnnotation(
-            required=self.required, default=default, metadata=self.get_metadata()
+            required=self.required, default=default, metadata=self.get_metadata(),
+            validate_internal= None
         )
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
