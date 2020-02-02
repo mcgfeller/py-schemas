@@ -235,7 +235,7 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing # convert missing
         return abc_schema.SchemaTypeAnnotation(
             required=self.required, default=default, metadata=self.get_metadata(),
-            validate_internal= None
+            validate_internal= self.validate_internal_wrapper
         )
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
@@ -293,6 +293,15 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
                 required=required, missing=default, default=default, metadata=metadata
             )
         return mmf
+
+    @staticmethod
+    def validate_internal_wrapper(
+        annotation: abc_schema.SchemaTypeAnnotation,
+        schemaElement: abc_schema.AbstractSchemaElement,
+        value: typing.Any,
+        **params,
+    ) -> typing.Any:
+        return schemaElement._validate(value)
 
 
 # monkey-patch Field by adding superclass:

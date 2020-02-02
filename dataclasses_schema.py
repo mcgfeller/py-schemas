@@ -8,6 +8,7 @@ import dataclasses
 import datetime
 import typing
 import typing_extensions
+import types
 
 
 class DCSchema(abc_schema.AbstractSchema):
@@ -67,7 +68,7 @@ class DCSchema(abc_schema.AbstractSchema):
         for element in self:
             ann = element.get_annotation()
             name = element.get_name()
-            newd = abc_schema.SchemaTypeAnnotation.validate_internal(
+            newd = ann.validate_internal(
                 ann, element, d.get(name, dataclasses.MISSING)
             )
             if newd is not dataclasses.MISSING:
@@ -119,6 +120,7 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
         The SchemaTypeAnnotation, however, prescribes a representation. It can either be attached to the 
         SchemaElement, or generated from it when queried by .get_annotation(). 
     """
+    Ann_meta_key:str = 'SchemaTypeAnnotation' # key of annotation in meta dict
 
     def __init__(self, schema: DCSchema, field: dataclasses.Field):
         if not isinstance(schema, DCSchema):
@@ -139,26 +141,43 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
         return self.field.type
 
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
-        """ get SchemaTypeAnnotation of this DCSchemaElement """
-        default = (
-            self.field.default
-        )  # substitute dataclass field missing with our missing
-        if default is dataclasses.MISSING:
-            if self.field.default_factory is dataclasses.MISSING:
-                default = abc_schema.MISSING
-            else:
-                default = self.field.default_factory
+        """ get SchemaTypeAnnotation of this DCSchemaElement.
+            Get it from metadata, if available, else compute and cache.
+        """
+        ann = self.field.metadata.get(self.Ann_meta_key)
+        if not ann:
+            default = (
+                self.field.default
+            )  # substitute dataclass field missing with our missing
+            if default is dataclasses.MISSING:
+                if self.field.default_factory is dataclasses.MISSING:
+                    default = abc_schema.MISSING
+                else:
+                    default = self.field.default_factory
 
-        return abc_schema.SchemaTypeAnnotation(
-            required=default is abc_schema.MISSING,
-            default=default,
-            metadata=self.field.metadata,
-        )
+            ann = abc_schema.SchemaTypeAnnotation(
+                required=default is abc_schema.MISSING,
+                default=default,
+                metadata=self.field.metadata,
+            )
+            metadata = self._ensure_updateable(self.get_metadata())
+            metadata[self.Ann_meta_key] = ann # cache ann
+            self.field.metadata = metadata
+        return ann
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
         """
         return self.field.metadata
+
+    @staticmethod
+    def _ensure_updateable(d : typing.Mapping) -> typing.Dict:
+        """ ensure d is updatable, even if is a MappingProxy """
+        if isinstance(d,types.MappingProxyType):
+            # d is a mappingproxy, which cannot be updated
+            d = d.copy() # but copied
+        return d
+ 
 
     @classmethod
     def from_schema_element(
@@ -177,11 +196,14 @@ class DCSchemaElement(abc_schema.AbstractSchemaElement):
             default = dataclasses.MISSING
         else:
             default_factory = dataclasses.MISSING
+
+        metadata = cls._ensure_updateable(schema_element.get_metadata())
+        metadata[cls.Ann_meta_key] = ann
         # Make a dataclasses Field:
         dcfield = dataclasses.field(
             default=default,
             default_factory=default_factory,
-            metadata=schema_element.get_metadata(),
+            metadata=metadata,
         )
         dcfield.name = schema_element.get_name()
         dcfield.type = schema_element.get_python_type()
