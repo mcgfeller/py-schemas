@@ -39,9 +39,7 @@ def test_get_schema():
     assert len({se.get_name(): se.get_python_type()
                 for se in s}) == len(s.fields)
     assert s.fields["name"].get_schema() is s
-    assert s.fields["education"].get_metadata() == {
-        "payload": "field metadata"
-    }
+    assert s.fields["education"].get_metadata()["payload"] == "field metadata"
 
     field = s.fields["education"]
     mm.fields.Field.from_schema_element(field)
