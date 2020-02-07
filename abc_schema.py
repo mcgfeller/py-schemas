@@ -62,9 +62,8 @@ class AbstractSchema(collections.abc.Iterable):
         bool
     ] = False  # must be overwritten if callable input / output is supported
 
-    __objclass__: typing.Optional[
-        typing.Type
-    ] = None  # class of the corresponding object
+    __objclass__: typing.ClassVar[typing.Optional[
+        typing.Type]] = None  # class of the corresponding object
 
     def get_name(self) -> typing.Optional[str]:
         """ get name of Schema or None """
