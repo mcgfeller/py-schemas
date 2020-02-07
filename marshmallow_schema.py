@@ -231,7 +231,11 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         return self.FieldType_to_PythonType.get(self.__class__, typing.Type[typing.Any])
 
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
-        """ get SchemaTypeAnnotation  """
+        """ get SchemaTypeAnnotation: We include per-field validation here, so other libraries
+            may use our validation by calling validate_internal. However, we need
+            the whole Marshmallow field as context for field._validate, so 
+            we store it in the annotation. 
+        """
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing # convert missing
         sta = abc_schema.SchemaTypeAnnotation(
             required=self.required, default=default, metadata=self.get_metadata(),
