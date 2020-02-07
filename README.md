@@ -9,9 +9,9 @@ It expand on the ideas put forth in my [Dec 17 Blog Post on Python Schemas](http
 
 Despite the popularity of "schema-less" databases, Schemas are needed to validate data and to exchange data with others. The primary goal of this proposal is **interoperability**: Use some package that employs a schema written in a schema solution, without re-coding the schema. 
 
-For example, use an SQLalchemy-schemed object as a `Nested` field in a Marshmallow schema, allowing serialization to JSON. The emphasis is on using Schemas, without prescribing how Schema libraries organize their internals, and how schemas are constructed using these libraries. 
+For example, use an SQLalchemy-schemed object as a `Nested` field in a Marshmallow schema, allowing serialization to JSON. The emphasis is on using Schemas, without prescribing how Schema solutions organize their internals, and how schemas are constructed using these solutions. 
 
-There is a large number of [pre-existing solutions](ExistingSolutions.md). Software created for specific new uses cases, such as GraphQL and some new web frameworks also seem to prefer creating new schema libraries instead of reusing an existing library. There is no agreed leading solution, and no generic interoperability, but many ad-hoc 1-1 adapters. 
+There is a large number of [pre-existing solutions](ExistingSolutions.md). Software created for specific new uses cases, such as GraphQL and some new web frameworks also seem to prefer creating new Schema solution instead of reusing an existing solution. There is no agreed leading solution, and no generic interoperability, but many ad-hoc 1-1 adapters. 
 
 ## PEP
 
@@ -38,13 +38,14 @@ The minimal standard is defined as a Protocol, with some Abstract Base Classes. 
 * Obtaining Schema elements
 * Static type checking
   * Get the Python type of a schema element 
-* Minimal Schema transformation:
+* Schema transformation:
   * Get an annotated Python type of a schema element
   * Construct a a Schema element from an annotated Python
   * Construct a Schema from another Schema (from another Schema solution) by going through annotated Python types for each element. 
+  * A complete round-trip fidelity between Schema solutions is not feasible, but basic field validation can be implemented. 
 * Associate data with Schema
 
-The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. However, it does provide standard Type Annotations for interoperability andminimal conversion of Schema features between schema libraries See [Alternatives considered](alternatives.md).
+The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. However, it does provide standard Type Annotations for interoperability andminimal conversion of Schema features between Schema solutions. See [Alternatives considered](alternatives.md).
 
 
 
@@ -52,7 +53,7 @@ The protocol doesn't provide a standard representation for Schemas or Schema Ele
 
 There are a number of [Use Cases](UseCases.md) and a large number of [pre-existing solutions](ExistingSolutions.md), serving a wide number of serialization targets. 
 
-Using the Protocol for a single schema library, such as Marshmallow, does not provide facilities superior over the native usage. However, if the protocol is implemented by several libraries, integration of libraries using different schema facilities becomes much easier.
+Using the Protocol for a single schema solution, such as Marshmallow, does not provide facilities superior over the native usage. However, if the protocol is implemented by several solutions, integration of solutions using different schema facilities becomes much easier. Adaptions to each other solution are replaced by one adaption to the standard protocol). 
 
 # Approach to Consensus
 

@@ -2,7 +2,7 @@
 
 Some of the following Use Cases may be amenable to interoperability by defining protocols.
 
-The Use Cases reliy on common minimal [definitions](definitions.md). 
+The Use Cases rely on common minimal [definitions](definitions.md). 
 
 ## Use Case: Define a Schema 
 
@@ -41,7 +41,7 @@ An object in _internal form_ can be dynamically validated to conform to a schema
 
 An object is being statically checked [mypy](http://mypy-lang.org/) to conform to its type annotation. See [PEP-484](https://www.python.org/dev/peps/pep-0484) for details. 
 
-Note that MyPy currently cannot check type definitions returned by functions and methods (definitions, not the return type itself). However, MyPy has a [plugin mechanism](http://mypy-lang.blogspot.com/2019/03/extending-mypy-with-plugins.html) that should support such calculated types. 
+A Python Type and Type Annotation [PEP 593](https://www.python.org/dev/peps/pep-0593) may be obtained from a Schema Element. If provided, the Type Annotation is standardized, ensuring interoperability. 
 
 ## Use Case: Defining an individual data item
 
@@ -53,7 +53,13 @@ A Schema may be transformed to another Schema notation; either within Python or 
 
 ### Round trip
 
-Transforming a Schema to another Python-based Schema notation, only using protocol facilities. If the source and target Schema are the same (i.e., transforming to itself using only protocol facilities), *round trip fidelity* is achieved when source and target schema are identical. As the protocol is unlikely to cover all features of a Schema solution, round trip fidelity cannot be achieved except for rather simple Schema solutions.
+Transforming a Schema to another Python-based Schema notation, only using protocol facilities. If the source and target Schema are the same (i.e., transforming to itself using only protocol facilities), *round trip fidelity* is achieved when source and target schema are identical. 
+
+As the protocol is unlikely to cover all features of a Schema solution, round trip fidelity is unlikely to be fully achievable. However, for Schema solutions fully implementing the protcol, including the Type Annotation, large parts of the functionality become interoperable.
+
+### Example
+
+- Use a Marshmallow Schema to define dataclasses. 
 
 ## Use Case: Associate data with Schema or Schema Elements
 
@@ -74,9 +80,9 @@ A schema can be used to generate and validate a form, either using HTML forms or
 
 ## Use Case Diagram
 
-![Image](https://yuml.me/3ec691c7.png)
+![Image](https://yuml.me/d8c165bd.png)
 
-http://yuml.me/edit/3ec691c7
+http://yuml.me/edit/d8c165bd
 
 
 

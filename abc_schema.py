@@ -5,14 +5,14 @@ import typing
 import typing_extensions
 import collections.abc
 import enum
-import dataclasses
+
 
 NotAvailable = NotImplementedError("method not available in this class")
 
 
 class SchemedObject(metaclass=abc.ABCMeta):
     """ An object with a Schema, supporting the __get_schema__ method.
-        It is completly optional, but very convinient to have the schema
+        It is completly optional, but very convenient to have the schema
         accessible from each schemed object. 
     """
 
