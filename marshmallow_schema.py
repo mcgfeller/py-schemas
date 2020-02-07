@@ -84,7 +84,7 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
         method = supported[destination]
         try:  # translate error
             e = method(obj, **params)
-        except mm.exceptions.ValidationError as verror:
+        except mm.exceptions.ValidationError as verror: # catch and re-raise as standard error
             raise abc_schema.ValidationError(str(verror), original_error=verror)
         if writer_callback:
             return writer_callback(e)
@@ -118,7 +118,7 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
 
         try:  # translate error        
             d = method(external, **params)
-        except mm.exceptions.ValidationError as verror:
+        except mm.exceptions.ValidationError as verror: # catch and re-raise as standard error
             raise abc_schema.ValidationError(str(verror), original_error=verror)
         o = self.object_factory(d)
 
@@ -133,7 +133,7 @@ class MMSchema(mm.Schema, abc_schema.AbstractSchema, metaclass=_MMSchemaMeta):
         """
         try:  # translate error
             d = self.load(self.dump(obj))  # may raise an error
-        except mm.exceptions.ValidationError as verror:
+        except mm.exceptions.ValidationError as verror: # catch and re-raise as standard error
             raise abc_schema.ValidationError(str(verror), original_error=verror)
         obj = self.object_factory(d)  # we have to re-convert to an object
         return obj
@@ -233,10 +233,12 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
     def get_annotation(self) -> abc_schema.SchemaTypeAnnotation:
         """ get SchemaTypeAnnotation  """
         default = abc_schema.MISSING if self.missing is mm.missing else self.missing # convert missing
-        return abc_schema.SchemaTypeAnnotation(
+        sta = abc_schema.SchemaTypeAnnotation(
             required=self.required, default=default, metadata=self.get_metadata(),
             validate_internal= self.validate_internal_wrapper
         )
+        sta._orig_schema_element = self
+        return sta
 
     def get_metadata(self) -> typing.Mapping[str, typing.Any]:
         """ return metadata (aka payload data) for this SchemaElement.
@@ -301,7 +303,15 @@ class MMfieldSuper(abc_schema.AbstractSchemaElement):
         value: typing.Any,
         **params,
     ) -> typing.Any:
-        return schemaElement._validate(value)
+        """ Wrap Marshmallow's field._validate. Uses annotation._orig_schema_element,
+            which must be set at creation time.
+        """
+        try:
+            annotation._orig_schema_element._validate(value)
+        except mm.exceptions.ValidationError as verror: # catch and re-raise as standard error
+            raise abc_schema.ValidationError(str(verror), original_error=verror)
+        
+        return value
 
 
 # monkey-patch Field by adding superclass:
