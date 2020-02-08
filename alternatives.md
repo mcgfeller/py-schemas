@@ -15,24 +15,15 @@ support all use cases or all external representations, and hence may not need al
 
 ## Standardized behavior for Schema Elements
 
-Apart from the `.get_python_type()` and `.get_schema()` methods, there is no protocol defined for Schema Elements. In particular, a Schema is free on how to use its Schema Elements to achieve a transformation. This is necessary to enable streaming parsers (such as SAX for XML) where Schema Element methods are used as callbacks from the parser. 
+Apart from the `.get_python_type()`, `.get_annotated()` and `.get_schema()` methods, there is no mandatory protocol defined for Schema Elements. In particular, a Schema is free on how to use its Schema Elements to achieve a transformation. This is necessary to enable streaming parsers (such as SAX for XML) where Schema Element methods are used as callbacks from the parser. 
 
 # Alternatives for consideration
 
-## Minimal Common Schema Element
+## Extend SchemaTypeAnnotation
 
-Define a minimal common Schema Element (instead of using `dataclasses.Field`), which the following attributes:
-- name
-- Python type
-- default
-- required (and marker if value is absent)
+The SchemaTypeAnnotation defines a minimal common Schema Element. It could be extended by facilities for:
 
-and less straight-forward:
-- validation function
-  - what's a generic, yet simple signature?
-- sub elements:
-  - container type:
-    - key, value
-  - relation (reference)
+- nested elements (references to other schemas)
+- general relations (references to elements of other schemas, and constraints on them)
   
-This would allow better schema translation fidelity and make `SchemaElement.from_schema_element()` more useful.  
+This would allow better schema translation fidelity, but could add complexity.  

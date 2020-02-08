@@ -3,7 +3,9 @@
 
 This is a working document to propose a minimal standard for interoperability of Schemas used in Python. 
 
-It expand on the ideas put forth in my [Dec 17 Blog Post on Python Schemas](https://ict.swisscom.ch/2017/12/python-schema/) and on growing frustrations with special-purpose schemas. 
+**The procotol is itself is introduced in the [Schema Protocol Jupyter Notebook](SchemaProtocol.ipynb)**, and is defined in  [abc_schema.py](abc_schema.py).
+
+It expands on the ideas put forth in my [Dec 2017 Blog Post on Python Schemas](https://ict.swisscom.ch/2017/12/python-schema/) and on growing frustrations with special-purpose schemas. 
 
 # Goals
 
@@ -39,14 +41,13 @@ The minimal standard is defined as a Protocol, with some Abstract Base Classes. 
 * Static type checking
   * Get the Python type of a schema element 
 * Schema transformation:
-  * Get an annotated Python type of a schema element
-  * Construct a a Schema element from an annotated Python
-  * Construct a Schema from another Schema (from another Schema solution) by going through annotated Python types for each element. 
+  * Get an annotated Python type of a schema element (Type Annotations are defined in [PEP 593](https://www.python.org/dev/peps/pep-0593))
+  * Construct a a Schema element from an annotated type
+  * Construct a Schema from another Schema (from another Schema solution) by going through annotated types for each element. 
   * A complete round-trip fidelity between Schema solutions is not feasible, but basic field validation can be implemented. 
-* Associate data with Schema
+* Associate data with a Schema
 
-The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. However, it does provide standard Type Annotations for interoperability andminimal conversion of Schema features between Schema solutions. See [Alternatives considered](alternatives.md).
-
+The protocol doesn't provide a standard representation for Schemas or Schema Elements; it only provides standard access and use. However, it does provide standard Type Annotations for interoperability and minimal conversion of Schema features between Schema solutions. See also [Alternatives considered](alternatives.md).
 
 
 ## Allow wide variety of Use Cases and destinations
@@ -58,8 +59,3 @@ Using the Protocol for a single schema solution, such as Marshmallow, does not p
 # Approach to Consensus
 
 Have a Python Special Interest Group (SIG) like [DB SIG](https://www.python.org/community/sigs/current/db-sig/). [Known Schema solutions](ExistingSolutions.md) are candidates to participate. 
-
-
-
-
-
