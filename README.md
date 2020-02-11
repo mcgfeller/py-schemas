@@ -42,7 +42,7 @@ The minimal standard is defined as a Protocol, with some Abstract Base Classes. 
   * Get the Python type of a schema element 
 * Schema transformation:
   * Get an annotated Python type of a schema element (Type Annotations are defined in [PEP 593](https://www.python.org/dev/peps/pep-0593))
-  * Construct a a Schema element from an annotated type
+  * Construct a Schema element from an annotated type
   * Construct a Schema from another Schema (from another Schema solution) by going through annotated types for each element. 
   * A complete round-trip fidelity between Schema solutions is not feasible, but basic field validation can be implemented. 
 * Associate data with a Schema
