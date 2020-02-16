@@ -10,7 +10,7 @@ Name | Framework | Main Purpose | Formats | Validation | Un/Serialization | Obje
 [Strawberry](https://github.com/strawberry-graphql/strawberry) | Strawberry | GraphQL | GraphQL | x | x | - | [Patrick Arminio](mailto:patrick.arminio@gmail.com) | Uses Python types |
 [Cerberus](http://docs.python-cerberus.org/en/stable/) | Eve | Document validation, REST API | Python dict  | x | - | - | [Mailing List](https://groups.google.com/forum/?hl=en#!forum/python-eve) |
 [Colander](https://docs.pylonsproject.org/projects/colander/en/latest/) | Pyramid | Serialization | XML, HTML, JSON  | x | x | x | [Github Issue](https://github.com/Pylons/colander/issues) |
-[KIM](https://kim.readthedocs.io/en/latest/) | standalone | JSON serialization and validation | JSON  | x | x | x | Abandoned? [Github Issue](https://github.com/mikeywaites/kim/issues) |
+[KIM](https://kim.readthedocs.io/en/latest/) | standalone | JSON serialization and validation | JSON  | x | x | x | [Github Issue](https://github.com/mikeywaites/kim/issues) |
 [Pydantic](https://pydantic-docs.helpmanual.io/) | standalone | Data validation using Python types | Python, JSON | x | x | x | [Samuel Colvin](S@muelColvin.com) | mypy, JSON schema support | 
 [schema](https://pypi.org/project/schema/) | standalone | Python data validation | Python data | x | via converters | - | [Vladimir Keleshev](mailto:vladimir@keleshev.com) |
 [Schematics](https://schematics.readthedocs.io/en/latest/) | standalone | Validation, conversion | Python, language agnostic | x | x | x | [Kalle Tuure](mailto:kalle@goodtimes.fi) | "for Humans" philosophy. |
