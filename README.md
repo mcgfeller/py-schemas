@@ -1,3 +1,7 @@
+# Proposal Withdrawn
+
+July 2025: **This proposal has been withdrawn, as [Pydantic](https://github.com/pydantic/pydantic) emerged as the clear winner of Python schemas, and interoperability is no longer required.**
+
 # py-schemas
 
 
